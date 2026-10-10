@@ -9,7 +9,7 @@ import type { Command } from "../types.js";
 import { communityConfigStore } from "../utils/store.js";
 import {
   DEFAULT_WELCOME_TEMPLATE,
-  renderWelcomeMessage,
+  buildWelcomePayload,
 } from "../utils/welcome.js";
 
 const command: Command = {
@@ -136,13 +136,12 @@ const command: Command = {
       }
       const member = await guild.members.fetch(interaction.user.id);
       try {
-        await channel.send({
-          content: renderWelcomeMessage(
+        await channel.send(
+          buildWelcomePayload(
             config.welcomeMessage ?? DEFAULT_WELCOME_TEMPLATE,
             member,
           ),
-          allowedMentions: { parse: [], users: [member.id] },
-        });
+        );
       } catch {
         await interaction.reply({
           content: "❌ Je n’ai pas la permission d’envoyer un message dans ce salon.",
