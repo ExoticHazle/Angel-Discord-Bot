@@ -196,11 +196,13 @@ const command: Command = {
         rewardRole = role;
       }
 
-      const result = await articleStore.purchase(guildId, id, interaction.user.id, interaction.user.tag);
+      const result = await articleStore.purchase(guildId, id, interaction.user.id, interaction.user.tag,
+        rewardRole ? object?.id : undefined);
       const messages = {
         not_found: "❌ Article introuvable.",
         sold_out: "❌ Cet article est épuisé.",
         funds: "❌ Vous n'avez pas assez d'Orëlyss.",
+        already_owned: "❌ Tu possèdes déjà cet objet offrant un rôle. Aucun Orëlyss débité.",
       } as const;
       if (!result.ok) {
         await interaction.editReply(messages[result.reason]);
