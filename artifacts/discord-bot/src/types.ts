@@ -97,6 +97,8 @@ export interface ServerObject {
   name: string;
   description: string;
   emoji: string;
+  /** Rôle donné automatiquement lors de l'achat d'un article lié à cet objet. */
+  roleId?: string;
   createdAt: number;
 }
 
