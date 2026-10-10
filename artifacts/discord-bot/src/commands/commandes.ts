@@ -24,7 +24,7 @@ const command: Command = {
             "`/dm` — envoyer un message privé",
             "`/bienvenue` — configurer le message d’arrivée",
             "`/note` et `/notes` — gérer et consulter les notes",
-            "`/objet` — créer et afficher les objets",
+            "`/objet creer|role|liste` — créer des objets et choisir les rôles offerts",
             "`/quota` — gérer les quotas et leurs salons",
             "`/suivi-effectif` — lister les membres d'un rôle",
             "`/boutique ajouter|modifier|supprimer|ordre` — gérer la boutique",
