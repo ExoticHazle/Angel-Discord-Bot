@@ -709,7 +709,7 @@ export const articleStore = {
     )).returning({ id: shopArticlesTable.id });
     return deleted.length > 0;
   },
-  async purchase(guildId: string, id: string, userId: string, userTag: string) {
+  async purchase(guildId: string, id: string, userId: string, userTag: string, uniqueRoleObjectId?: string) {
     return db.transaction(async (tx) => {
       const [articleRow] = await tx.select().from(shopArticlesTable).where(and(
         eq(shopArticlesTable.guildId, guildId),
@@ -725,6 +725,11 @@ export const articleStore = {
       )).for("update").limit(1);
       const profile = profileRow ? profileFromRow(profileRow) : newProfile(guildId, userId);
       if (profile.orelyss < articleRow.price) return { ok: false as const, reason: "funds" as const };
+      // Même si deux achats arrivent en même temps, le verrou du profil
+      // empêche de payer deux fois pour le même objet offrant un rôle.
+      if (uniqueRoleObjectId && (profile.inventory[uniqueRoleObjectId] ?? 0) > 0) {
+        return { ok: false as const, reason: "already_owned" as const };
+      }
       profile.orelyss -= articleRow.price;
       if (articleRow.objectId) {
         profile.inventory[articleRow.objectId] = (profile.inventory[articleRow.objectId] ?? 0) + 1;
