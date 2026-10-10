@@ -1,0 +1,118 @@
+{
+  "1483163622866817124": [
+    {
+      "type": "ticket_close",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": "exotic_hazle",
+      "reason": "Ticket fermé via bouton : ticket-exotic_hazle",
+      "timestamp": 1782996442172
+    },
+    {
+      "type": "ticket_open",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": "exotic_hazle",
+      "reason": "Ticket ouvert : ticket-exotic_hazle",
+      "timestamp": 1782996437705
+    },
+    {
+      "type": "ticket_close",
+      "guildId": "1483163622866817124",
+      "targetId": "1483109167580577874",
+      "targetTag": ".kaemon.",
+      "moderatorTag": ".kaemon.",
+      "reason": "Ticket fermé via bouton : ticket-exotic_hazle",
+      "timestamp": 1782996235272
+    },
+    {
+      "type": "ticket_open",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": "exotic_hazle",
+      "reason": "Ticket ouvert : ticket-exotic_hazle",
+      "timestamp": 1782996180189
+    },
+    {
+      "type": "ticket_close",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": "exotic_hazle",
+      "reason": "Ticket fermé via bouton : ticket-exotic_hazle",
+      "timestamp": 1782996148995
+    },
+    {
+      "type": "ticket_open",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": "exotic_hazle",
+      "reason": "Ticket ouvert : ticket-exotic_hazle",
+      "timestamp": 1782996088216
+    },
+    {
+      "type": "ticket_close",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": "exotic_hazle",
+      "reason": "Ticket fermé via bouton : ticket-exotic_hazle",
+      "timestamp": 1782995814549
+    },
+    {
+      "type": "ticket_open",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": "exotic_hazle",
+      "reason": "Ticket ouvert : ticket-exotic_hazle",
+      "timestamp": 1782995760008
+    },
+    {
+      "type": "warn",
+      "guildId": "1483163622866817124",
+      "targetId": "692776158701420657",
+      "targetTag": "exotic_hazle",
+      "moderatorTag": ".kaemon.",
+      "reason": "test",
+      "extra": "Warn #1",
+      "timestamp": 1782995574766
+    }
+  ],
+  "1509290689681297549": [
+    {
+      "type": "warn",
+      "guildId": "1509290689681297549",
+      "targetId": "1505999846736269542",
+      "targetTag": "Angel#1459",
+      "moderatorTag": "exotic_hazle",
+      "reason": "test 3",
+      "extra": "Warn #3",
+      "timestamp": 1785417827428
+    },
+    {
+      "type": "warn",
+      "guildId": "1509290689681297549",
+      "targetId": "1505999846736269542",
+      "targetTag": "Angel#1459",
+      "moderatorTag": "exotic_hazle",
+      "reason": "test 2",
+      "extra": "Warn #2",
+      "timestamp": 1785417823673
+    },
+    {
+      "type": "warn",
+      "guildId": "1509290689681297549",
+      "targetId": "1505999846736269542",
+      "targetTag": "Angel#1459",
+      "moderatorTag": "exotic_hazle",
+      "reason": "test",
+      "extra": "Warn #1",
+      "timestamp": 1785417810805
+    }
+  ]
+}

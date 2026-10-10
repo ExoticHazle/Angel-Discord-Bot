@@ -1,0 +1,2 @@
+- [Discord command constraints](discord-command-constraints.md) — required options precede optional ones; mixed-permission subcommands need runtime checks.
+- [Workspace DB runtime packaging](workspace-db-runtime-packaging.md) — runtime consumers need compiled DB exports; declaration-only workspace packages break Node bot startup.

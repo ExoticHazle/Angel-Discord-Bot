@@ -1,45 +1,59 @@
-# [Project name]
+# Angel
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Angel est un bot Discord francophone qui réunit la modération, les notes du staff, les quotas, les niveaux, les Orëlyss, une boutique, des quêtes et un inventaire.
 
-## Run & Operate
+## Lancer et exploiter
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm install --frozen-lockfile` — installer les dépendances.
+- `pnpm run typecheck` — vérifier tous les packages TypeScript.
+- `PORT=8081 BASE_PATH=/__mockup pnpm run build` — vérifier puis compiler tous les packages, y compris l'artefact de prévisualisation.
+- `pnpm --filter @workspace/db run push` — appliquer le schéma au PostgreSQL de développement.
+- `pnpm --filter @workspace/discord-bot run build` — compiler le bot.
+- `pnpm --filter @workspace/discord-bot run start` — connecter Angel à Discord.
+- `pnpm --filter @workspace/discord-bot run deploy` — publier les commandes slash. Sans `DISCORD_GUILD_ID`, Discord remplace la liste globale existante par celle du dépôt ; avec cette variable, les commandes ne sont publiées que sur le serveur indiqué.
+
+Variables nécessaires au bot :
+
+- `DISCORD_BOT_TOKEN` — secret du bot.
+- `DISCORD_CLIENT_ID` — identifiant public de l’application Discord, utilisé pour publier les commandes.
+- `DISCORD_GUILD_ID` — facultatif ; serveur ciblé pour un déploiement de test.
+- `DATABASE_URL` — PostgreSQL géré par Replit.
+
+Le bot a besoin des intents **Server Members** et **Message Content** activés dans le portail développeur Discord. Il doit être invité avec les scopes `bot` et `applications.commands`, et avec les permissions correspondant aux commandes que le serveur utilisera.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Bot : discord.js 14
+- Données de communauté : PostgreSQL + Drizzle ORM
+- API partagée : Express 5
+- Client API : OpenAPI, Orval et Zod
 
-## Where things live
+## Organisation du dépôt
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/discord-bot` — commandes slash, événements Discord et règles de jeu.
+- `artifacts/discord-bot/src/utils/store.ts` — accès aux données du bot.
+- `artifacts/discord-bot/src/utils/time.ts` — dates quotidiennes et périodes de quotas en heure de Paris.
+- `artifacts/discord-bot/src/utils/scheduler.ts` — rappels, bilans de quotas et suivi vocal.
+- `lib/db/src/schema/index.ts` — schéma PostgreSQL.
+- `artifacts/api-server` — API Express conservée depuis le dépôt source.
+- `artifacts/mockup-sandbox` — espace de prévisualisation de composants conservé depuis le dépôt source.
 
-## Architecture decisions
+## Commandes
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+La commande `/commandes` présente les commandes en trois catégories : administration, modération et membres. Discord choisit lui-même l’ordre de sa liste slash ; les permissions du bot limitent l’accès aux commandes admin et modération.
 
-## Product
+Les quotas doivent être configurés pour les rôles du serveur avec `/quota role` et le salon de rapports avec `/quota salon-admin`. Le rôle Animateur utilise 200 messages et le rôle Modérateur 250 par défaut lorsque leur nom correspond ; les autres rôles demandent un quota explicite. `/quota salon-niveaux` choisit le salon des messages de montée de niveau.
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+## Données et règles
 
-## User preferences
+- Les profils, monnaies, inventaires, quêtes, achats, notes et configurations sont conservés en PostgreSQL.
+- Les données historiques de modération et les avertissements staff restent dans les fichiers de données du dépôt source.
+- Les daily et les quotas suivent le fuseau `Europe/Paris`.
+- Les quotas se réinitialisent toutes les deux semaines le dimanche ; le rappel est envoyé le dimanche précédent.
+- Le niveau 0 est conservé en interne, mais n'est pas affiché dans le profil ni le classement.
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+## Pointeurs et contraintes
 
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Voir `.agents/memory/discord-command-constraints.md` avant de modifier les commandes slash : Discord impose l'ordre des options et applique les permissions au niveau de la commande racine.
+- Voir `.agents/memory/workspace-db-runtime-packaging.md` avant de modifier les exports de `@workspace/db` : les services compilés ont besoin des exports JavaScript dans `dist`.

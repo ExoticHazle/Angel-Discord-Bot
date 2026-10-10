@@ -1,0 +1,49 @@
+{
+  "configs": {
+    "1483163622866817124": {
+      "quotaRoles": {},
+      "quotaPeriodKey": "2026-09-20",
+      "quotaReminderKey": "2026-09-20"
+    },
+    "1509290689681297549": {
+      "quotaRoles": {},
+      "quotaPeriodKey": "2026-09-20",
+      "quotaReminderKey": "2026-09-20"
+    }
+  },
+  "profiles": {
+    "1483163622866817124-1482463592862187644": {
+      "guildId": "1483163622866817124",
+      "userId": "1482463592862187644",
+      "xp": 40,
+      "level": 0,
+      "orelyss": 0,
+      "messageCount": 2,
+      "voiceMinutes": 0,
+      "quotaMessages": 0,
+      "dailyStreak": 0,
+      "inventory": {},
+      "questProgress": {},
+      "completedQuests": []
+    },
+    "1483163622866817124-776854800695558196": {
+      "guildId": "1483163622866817124",
+      "userId": "776854800695558196",
+      "xp": 20,
+      "level": 0,
+      "orelyss": 0,
+      "messageCount": 1,
+      "voiceMinutes": 0,
+      "quotaMessages": 0,
+      "dailyStreak": 0,
+      "inventory": {},
+      "questProgress": {},
+      "completedQuests": []
+    }
+  },
+  "notes": {},
+  "articles": {},
+  "quests": {},
+  "objects": {},
+  "purchases": {}
+}

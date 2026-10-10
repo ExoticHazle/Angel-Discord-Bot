@@ -1,0 +1,34 @@
+2026-07-02T13:08:27.412266711Z ==> Cloning from https://github.com/ExoticHazle/Asset-Viewer
+2026-07-02T13:08:28.276222466Z ==> Checking out commit f862d7e2a92756365e47a9138199d3cd5f5064f9 in branch main
+2026-07-02T13:08:31.496892831Z ==> Using Node.js version 24.14.1 (default)
+2026-07-02T13:08:31.496902902Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-07-02T13:08:31.556585819Z ==> Running build command 'npx --yes pnpm@latest install --frozen-lockfile && npx pnpm@latest --filter @workspace/discord-bot run build && DISCORD_BOT_TOKEN=$DISCORD_BOT_TOKEN DISCORD_CLIENT_ID=$DISCORD_CLIENT_ID node artifacts/discord-bot/dist/deploy-commands.js'...
+2026-07-02T13:08:33.641449451Z Scope: all 9 workspace projects
+2026-07-02T13:08:33.711009595Z ? Verifying lockfile against supply-chain policies (489 entries)...
+2026-07-02T13:08:33.722473799Z Lockfile is up to date, resolution step is skipped
+2026-07-02T13:08:33.852318679Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-07-02T13:08:33.894317556Z Packages: +487
+2026-07-02T13:08:33.894334018Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-07-02T13:08:34.854649893Z Progress: resolved 487, reused 0, downloaded 0, added 0
+2026-07-02T13:08:35.97958535Z Progress: resolved 487, reused 0, downloaded 1, added 0
+2026-07-02T13:08:36.673932206Z ✓ Lockfile passes supply-chain policies (489 entries in 2.9s)
+2026-07-02T13:08:36.979546276Z Progress: resolved 487, reused 0, downloaded 127, added 8
+2026-07-02T13:08:37.980468588Z Progress: resolved 487, reused 0, downloaded 310, added 20
+2026-07-02T13:08:38.981534151Z Progress: resolved 487, reused 0, downloaded 334, added 20
+2026-07-02T13:08:39.981686052Z Progress: resolved 487, reused 0, downloaded 338, added 24
+2026-07-02T13:08:40.982448361Z Progress: resolved 487, reused 0, downloaded 388, added 24
+2026-07-02T13:08:41.983600881Z Progress: resolved 487, reused 0, downloaded 421, added 28
+2026-07-02T13:08:42.984121941Z Progress: resolved 487, reused 0, downloaded 487, added 259
+2026-07-02T13:08:43.943313437Z Progress: resolved 487, reused 0, downloaded 487, added 487, done
+2026-07-02T13:08:44.265225976Z 
+2026-07-02T13:08:44.265253278Z devDependencies:
+2026-07-02T13:08:44.265258168Z + prettier 3.8.4
+2026-07-02T13:08:44.265263249Z + typescript 5.9.3
+2026-07-02T13:08:44.265267129Z 
+2026-07-02T13:08:44.292743479Z . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-07-02T13:08:44.327921383Z . preinstall: Done
+2026-07-02T13:08:44.432546083Z [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: esbuild@0.27.3
+2026-07-02T13:08:44.432568715Z 
+2026-07-02T13:08:44.432575845Z Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+2026-07-02T13:08:44.762912846Z ==> Build failed 😞
+2026-07-02T13:08:44.762933568Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
