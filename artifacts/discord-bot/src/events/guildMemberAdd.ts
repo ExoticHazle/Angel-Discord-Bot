@@ -1,6 +1,6 @@
 import { ChannelType, Events, type GuildMember } from "discord.js";
 import { autoroleStore, communityConfigStore } from "../utils/store.js";
-import { DEFAULT_WELCOME_TEMPLATE, renderWelcomeMessage } from "../utils/welcome.js";
+import { DEFAULT_WELCOME_TEMPLATE, buildWelcomePayload } from "../utils/welcome.js";
 
 export default {
   name: Events.GuildMemberAdd,
@@ -31,14 +31,13 @@ export default {
       return;
     }
 
-    const content = renderWelcomeMessage(
-      config.welcomeMessage ?? DEFAULT_WELCOME_TEMPLATE,
-      member,
-    );
-    await channel.send({
-      content,
-      allowedMentions: { parse: [], users: [member.id] },
-    }).catch((err) => {
+    await channel.send(
+      buildWelcomePayload(
+        config.welcomeMessage ?? DEFAULT_WELCOME_TEMPLATE,
+        member,
+        member.joinedAt ?? new Date(),
+      ),
+    ).catch((err) => {
       console.error(`[Welcome] Impossible d'envoyer le message à ${channel.name}:`, err);
     });
   },
