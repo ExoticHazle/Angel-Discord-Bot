@@ -58,6 +58,7 @@ export const serverObjectsTable = pgTable("discord_server_objects", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   emoji: text("emoji").notNull(),
+  roleId: text("role_id"),
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
 });
 

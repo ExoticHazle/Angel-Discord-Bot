@@ -3,6 +3,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
+  type Role,
 } from "discord.js";
 import { randomUUID } from "node:crypto";
 import type { Command } from "../types.js";
@@ -140,6 +141,7 @@ const command: Command = {
               description,
               "",
               `🪙 **${price} Orëlyss** · ${stockLabel(article.stock)}`,
+              ...(object?.roleId ? [`🎭 **Rôle offert :** <@&${object.roleId}>`] : []),
               `ID : \`${article.id}\``,
             ].join("\n"),
             inline: true,
@@ -161,21 +163,97 @@ const command: Command = {
       return;
     }
     if (sub === "acheter") {
+      await interaction.deferReply({ ephemeral: true });
+      const guild = interaction.guild!;
       const id = interaction.options.getString("id", true);
-      const result = await articleStore.purchase(guildId, id, interaction.user.id, interaction.user.tag);
+      const article = await articleStore.getById(guildId, id);
+      if (!article) {
+        await interaction.editReply("❌ Article introuvable.");
+        return;
+      }
+
+      // Un article peut récompenser un rôle par l'intermédiaire de son objet.
+      const object = article.objectId ? await objectStore.getById(guildId, article.objectId) : undefined;
+      let rewardRole: Role | null = null;
+      if (object?.roleId) {
+        const [role, member, botMember] = await Promise.all([
+          guild.roles.fetch(object.roleId).catch(() => null),
+          guild.members.fetch(interaction.user.id).catch(() => null),
+          guild.members.fetchMe().catch(() => null),
+        ]);
+        if (!role || !role.editable || !botMember?.permissions.has(PermissionFlagsBits.ManageRoles)) {
+          await interaction.editReply("❌ Achat indisponible : le bot ne peut pas attribuer le rôle de cet objet. Préviens un administrateur.");
+          return;
+        }
+        if (!member) {
+          await interaction.editReply("❌ Impossible de vérifier tes rôles pour cet achat.");
+          return;
+        }
+        if (member.roles.cache.has(role.id)) {
+          await interaction.editReply("❌ Tu possèdes déjà le rôle offert par cet article. Aucun Orëlyss débité.");
+          return;
+        }
+        rewardRole = role;
+      }
+
+      const result = await articleStore.purchase(guildId, id, interaction.user.id, interaction.user.tag,
+        rewardRole ? object?.id : undefined);
       const messages = {
         not_found: "❌ Article introuvable.",
         sold_out: "❌ Cet article est épuisé.",
         funds: "❌ Vous n'avez pas assez d'Orëlyss.",
+        already_owned: "❌ Tu possèdes déjà cet objet offrant un rôle. Aucun Orëlyss débité.",
       } as const;
       if (!result.ok) {
-        await interaction.reply({ content: messages[result.reason], ephemeral: true });
+        await interaction.editReply(messages[result.reason]);
         return;
       }
-      await interaction.reply({ content: `✅ Achat effectué : **${result.article.name}** pour ${result.article.price} Orëlyss.`, ephemeral: true });
+
+      if (rewardRole) {
+        try {
+          // Relecture après l'achat pour éviter une deuxième attribution concurrente.
+          const member = await guild.members.fetch({ user: interaction.user.id, force: true });
+          if (member.roles.cache.has(rewardRole.id)) {
+            const refunded = await articleStore.refundRolePurchase(guildId, result.log, result.article.objectId);
+            await interaction.editReply(refunded
+              ? "❌ Tu possèdes déjà ce rôle. Ton achat a été annulé et remboursé."
+              : "⚠️ Rôle déjà possédé. Vérifie ton solde et contacte un administrateur.");
+            return;
+          }
+          await member.roles.add(rewardRole, `Achat boutique : ${result.article.name}`);
+        } catch (err) {
+          console.error(`[Boutique] Attribution du rôle ${rewardRole.id} échouée :`, err);
+          // Discord peut avoir donné le rôle malgré une erreur réseau côté bot.
+          // Dans ce cas l'achat est bien honoré, on ne rembourse pas.
+          const memberAfterError = await guild.members.fetch({ user: interaction.user.id, force: true }).catch(() => null);
+          if (memberAfterError?.roles.cache.has(rewardRole.id)) {
+            await interaction.editReply({
+              content: `✅ Achat effectué : **${result.article.name}** pour ${result.article.price} Orëlyss.\n🎭 Tu as reçu <@&${rewardRole.id}> !`,
+              allowedMentions: { parse: [] },
+            });
+            return;
+          }
+          let refunded = false;
+          try {
+            refunded = await articleStore.refundRolePurchase(guildId, result.log, result.article.objectId);
+          } catch (refundError) {
+            console.error(`[Boutique] Remboursement de l'achat ${result.log.id} échoué :`, refundError);
+          }
+          await interaction.editReply(refunded
+            ? "❌ Le rôle n'a pas pu être attribué. L'achat a été annulé et tes Orëlyss ont été remboursés."
+            : "⚠️ Impossible d'attribuer le rôle ou de confirmer le remboursement. Contacte un administrateur avec cet ID d'achat : `" + result.log.id + "`.");
+          return;
+        }
+      }
+
+      await interaction.editReply({
+        content: `✅ Achat effectué : **${result.article.name}** pour ${result.article.price} Orëlyss.` +
+          (rewardRole ? `\n🎭 Tu as reçu le rôle <@&${rewardRole.id}> !` : ""),
+        allowedMentions: { parse: [] },
+      });
       if (result.article.stock === 0) {
-        const owners = await interaction.guild!.fetchOwner().catch(() => null);
-        await owners?.send(`⚠️ L'article **${result.article.name}** est épuisé sur ${interaction.guild!.name}.`).catch(() => null);
+        const owners = await guild.fetchOwner().catch(() => null);
+        await owners?.send(`⚠️ L'article **${result.article.name}** est épuisé sur ${guild.name}.`).catch(() => null);
       }
       return;
     }

@@ -251,6 +251,7 @@ function objectFromRow(row: typeof serverObjectsTable.$inferSelect): ServerObjec
     name: row.name,
     description: row.description,
     emoji: row.emoji,
+    roleId: row.roleId ?? undefined,
     createdAt: row.createdAt,
   };
 }
@@ -430,6 +431,7 @@ export async function initializeCommunityStore() {
           name: object.name,
           description: object.description,
           emoji: object.emoji,
+          roleId: object.roleId ?? null,
           createdAt: object.createdAt,
         }).onConflictDoNothing();
       }
@@ -707,7 +709,7 @@ export const articleStore = {
     )).returning({ id: shopArticlesTable.id });
     return deleted.length > 0;
   },
-  async purchase(guildId: string, id: string, userId: string, userTag: string) {
+  async purchase(guildId: string, id: string, userId: string, userTag: string, uniqueRoleObjectId?: string) {
     return db.transaction(async (tx) => {
       const [articleRow] = await tx.select().from(shopArticlesTable).where(and(
         eq(shopArticlesTable.guildId, guildId),
@@ -723,6 +725,11 @@ export const articleStore = {
       )).for("update").limit(1);
       const profile = profileRow ? profileFromRow(profileRow) : newProfile(guildId, userId);
       if (profile.orelyss < articleRow.price) return { ok: false as const, reason: "funds" as const };
+      // Même si deux achats arrivent en même temps, le verrou du profil
+      // empêche de payer deux fois pour le même objet offrant un rôle.
+      if (uniqueRoleObjectId && (profile.inventory[uniqueRoleObjectId] ?? 0) > 0) {
+        return { ok: false as const, reason: "already_owned" as const };
+      }
       profile.orelyss -= articleRow.price;
       if (articleRow.objectId) {
         profile.inventory[articleRow.objectId] = (profile.inventory[articleRow.objectId] ?? 0) + 1;
@@ -754,6 +761,46 @@ export const articleStore = {
       return { ok: true as const, article: articleFromRow({ ...articleRow, stock: articleRow.stock === null ? null : articleRow.stock - 1 }), profile, log };
     });
   },
+  /**
+   * Compense un achat si Discord refuse l'attribution du rôle.
+   * La ligne d'achat empêche de rembourser deux fois la même transaction.
+   */
+  async refundRolePurchase(guildId: string, log: PurchaseLog, objectId?: string): Promise<boolean> {
+    return db.transaction(async (tx) => {
+      const [purchaseRow] = await tx.select().from(purchaseLogsTable).where(and(
+        eq(purchaseLogsTable.id, log.id),
+        eq(purchaseLogsTable.guildId, guildId),
+        eq(purchaseLogsTable.userId, log.userId),
+      )).for("update").limit(1);
+      if (!purchaseRow) return false;
+
+      // Même ordre de verrouillage que purchase : article, puis profil.
+      const [articleRow] = await tx.select().from(shopArticlesTable).where(and(
+        eq(shopArticlesTable.guildId, guildId),
+        eq(shopArticlesTable.id, purchaseRow.articleId),
+      )).for("update").limit(1);
+      const [profileRow] = await tx.select().from(userProfilesTable).where(and(
+        eq(userProfilesTable.guildId, guildId),
+        eq(userProfilesTable.userId, purchaseRow.userId),
+      )).for("update").limit(1);
+      if (!profileRow) throw new Error("Profil introuvable : remboursement impossible.");
+
+      const profile = profileFromRow(profileRow);
+      profile.orelyss += purchaseRow.price;
+      if (objectId) {
+        const quantity = profile.inventory[objectId] ?? 0;
+        if (quantity > 1) profile.inventory[objectId] = quantity - 1;
+        else delete profile.inventory[objectId];
+      }
+      await upsertProfile(tx, profile);
+      if (articleRow && articleRow.stock !== null) {
+        await tx.update(shopArticlesTable).set({ stock: articleRow.stock + 1 })
+          .where(eq(shopArticlesTable.id, articleRow.id));
+      }
+      await tx.delete(purchaseLogsTable).where(eq(purchaseLogsTable.id, purchaseRow.id));
+      return true;
+    });
+  },
   async purchases(guildId: string, limit = 25) {
     const rows = await db.select().from(purchaseLogsTable)
       .where(eq(purchaseLogsTable.guildId, guildId))
@@ -777,8 +824,16 @@ export const objectStore = {
       name: object.name,
       description: object.description,
       emoji: object.emoji,
+      roleId: object.roleId ?? null,
       createdAt: object.createdAt,
     });
+  },
+  async setRole(guildId: string, id: string, roleId: string | null): Promise<boolean> {
+    const rows = await db.update(serverObjectsTable)
+      .set({ roleId })
+      .where(and(eq(serverObjectsTable.guildId, guildId), eq(serverObjectsTable.id, id)))
+      .returning({ id: serverObjectsTable.id });
+    return rows.length > 0;
   },
   async getById(guildId: string, id: string) {
     const [row] = await db.select().from(serverObjectsTable).where(and(
