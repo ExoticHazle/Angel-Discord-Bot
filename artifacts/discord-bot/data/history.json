@@ -85,6 +85,16 @@
   ],
   "1509290689681297549": [
     {
+      "type": "ban",
+      "guildId": "1509290689681297549",
+      "targetId": "1483109167580577874",
+      "targetTag": ".kaemon.",
+      "moderatorTag": "exotic_hazle",
+      "reason": "tu est nul",
+      "extra": "7j de messages supprimés",
+      "timestamp": 1791637727549
+    },
+    {
       "type": "warn",
       "guildId": "1509290689681297549",
       "targetId": "1505999846736269542",
