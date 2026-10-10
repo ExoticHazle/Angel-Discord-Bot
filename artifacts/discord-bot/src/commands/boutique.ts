@@ -221,6 +221,16 @@ const command: Command = {
           await member.roles.add(rewardRole, `Achat boutique : ${result.article.name}`);
         } catch (err) {
           console.error(`[Boutique] Attribution du rôle ${rewardRole.id} échouée :`, err);
+          // Discord peut avoir donné le rôle malgré une erreur réseau côté bot.
+          // Dans ce cas l'achat est bien honoré, on ne rembourse pas.
+          const memberAfterError = await guild.members.fetch({ user: interaction.user.id, force: true }).catch(() => null);
+          if (memberAfterError?.roles.cache.has(rewardRole.id)) {
+            await interaction.editReply({
+              content: `✅ Achat effectué : **${result.article.name}** pour ${result.article.price} Orëlyss.\n🎭 Tu as reçu <@&${rewardRole.id}> !`,
+              allowedMentions: { parse: [] },
+            });
+            return;
+          }
           let refunded = false;
           try {
             refunded = await articleStore.refundRolePurchase(guildId, result.log, result.article.objectId);
