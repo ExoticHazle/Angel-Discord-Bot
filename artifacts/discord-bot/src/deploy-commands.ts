@@ -36,8 +36,22 @@ console.log(
   `Deploying ${commands.length} slash commands ${guildId ? `to guild ${guildId}` : "globally"}...`,
 );
 
-const data = await rest.put(route, {
+await rest.put(route, {
   body: commands,
-}) as unknown[];
+});
 
-console.log(`Successfully deployed ${data.length} commands.`);
+const deployed = await rest.get(route) as Array<{ name: string }>;
+const expectedNames = commands.map((command) => (command as { name: string }).name);
+const deployedNames = deployed.map((command) => command.name);
+const missing = expectedNames.filter((name) => !deployedNames.includes(name));
+const unexpected = deployedNames.filter((name) => !expectedNames.includes(name));
+
+if (missing.length || unexpected.length || deployed.length !== commands.length) {
+  throw new Error(
+    `Slash command verification failed. Missing: ${missing.join(", ") || "none"}. ` +
+    `Unexpected: ${unexpected.join(", ") || "none"}.`,
+  );
+}
+
+console.log(`Successfully deployed and verified ${deployed.length} commands.`);
+console.log(`Commands: ${deployedNames.sort().join(", ")}`);
