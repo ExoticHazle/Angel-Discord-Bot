@@ -460,6 +460,8 @@ export const communityConfigStore = {
       quotaRoles: row.quotaRoles ?? {},
       quotaAdminChannelId: row.quotaAdminChannelId ?? undefined,
       levelsChannelId: row.levelsChannelId ?? undefined,
+      welcomeChannelId: row.welcomeChannelId ?? undefined,
+      welcomeMessage: row.welcomeMessage ?? undefined,
       quotaPeriodKey: row.quotaPeriodKey ?? undefined,
       quotaReminderKey: row.quotaReminderKey ?? undefined,
     };
@@ -470,6 +472,8 @@ export const communityConfigStore = {
       quotaRoles: config.quotaRoles,
       quotaAdminChannelId: config.quotaAdminChannelId ?? null,
       levelsChannelId: config.levelsChannelId ?? null,
+      welcomeChannelId: config.welcomeChannelId ?? null,
+      welcomeMessage: config.welcomeMessage ?? null,
       quotaPeriodKey: config.quotaPeriodKey ?? null,
       quotaReminderKey: config.quotaReminderKey ?? null,
     }).onConflictDoUpdate({
@@ -478,6 +482,8 @@ export const communityConfigStore = {
         quotaRoles: config.quotaRoles,
         quotaAdminChannelId: config.quotaAdminChannelId ?? null,
         levelsChannelId: config.levelsChannelId ?? null,
+        welcomeChannelId: config.welcomeChannelId ?? null,
+        welcomeMessage: config.welcomeMessage ?? null,
         quotaPeriodKey: config.quotaPeriodKey ?? null,
         quotaReminderKey: config.quotaReminderKey ?? null,
       },

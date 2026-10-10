@@ -5,6 +5,8 @@ export const communityConfigsTable = pgTable("discord_community_configs", {
   quotaRoles: jsonb("quota_roles").$type<Record<string, number>>().notNull().default({}),
   quotaAdminChannelId: text("quota_admin_channel_id"),
   levelsChannelId: text("levels_channel_id"),
+  welcomeChannelId: text("welcome_channel_id"),
+  welcomeMessage: text("welcome_message"),
   quotaPeriodKey: text("quota_period_key"),
   quotaReminderKey: text("quota_reminder_key"),
 });

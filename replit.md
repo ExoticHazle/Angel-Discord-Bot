@@ -45,10 +45,13 @@ La commande `/commandes` présente les commandes en trois catégories : administ
 
 Les quotas doivent être configurés pour les rôles du serveur avec `/quota role` et le salon de rapports avec `/quota salon-admin`. Le rôle Animateur utilise 200 messages et le rôle Modérateur 250 par défaut lorsque leur nom correspond ; les autres rôles demandent un quota explicite. `/quota salon-niveaux` choisit le salon des messages de montée de niveau.
 
+Le message d'arrivée se configure avec `/bienvenue configurer` en choisissant un salon texte. Le modèle accepte `{user}`, `{username}`, `{server}` et `{memberCount}`. `/bienvenue voir`, `/bienvenue test` et `/bienvenue desactiver` affichent, prévisualisent ou désactivent cette annonce.
+
 ## Données et règles
 
-- Les profils, monnaies, inventaires, quêtes, achats, notes et configurations sont conservés en PostgreSQL.
-- Les données historiques de modération et les avertissements staff restent dans les fichiers de données du dépôt source.
+- Les profils, monnaies, inventaires, quêtes, achats, notes et configurations de quota/bienvenue sont conservés en PostgreSQL.
+- Les autorôles et les réglages du règlement restent dans les fichiers de données suivis par Git ; les historiques et avertissements staff y sont également conservés.
+- Ne jamais réinitialiser les quotas, rôles ou autres données de serveur lors d’une modification du bot. Les changements de schéma doivent être additifs et préserver les lignes PostgreSQL ainsi que les fichiers de données existants.
 - Les daily et les quotas suivent le fuseau `Europe/Paris`.
 - Les quotas se réinitialisent toutes les deux semaines le dimanche ; le rappel est envoyé le dimanche précédent.
 - Le niveau 0 est conservé en interne, mais n'est pas affiché dans le profil ni le classement.

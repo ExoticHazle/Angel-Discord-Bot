@@ -22,6 +22,7 @@ const command: Command = {
           value: [
             "`/autorole` — rôles automatiques",
             "`/dm` — envoyer un message privé",
+            "`/bienvenue` — configurer le message d’arrivée",
             "`/note` et `/notes` — gérer et consulter les notes",
             "`/objet` — créer et afficher les objets",
             "`/quota` — gérer les quotas et leurs salons",

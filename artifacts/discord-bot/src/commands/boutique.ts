@@ -8,6 +8,21 @@ import { randomUUID } from "node:crypto";
 import type { Command } from "../types.js";
 import { articleStore, objectStore, profileStore } from "../utils/store.js";
 
+const ARTICLES_PER_EMBED = 12;
+
+function compactText(value: string, maxLength: number) {
+  const safe = value.replace(/@/g, "@\u200b").replace(/\s+/g, " ").trim();
+  if (safe.length <= maxLength) return safe;
+  return `${safe.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function stockLabel(stock: number | undefined) {
+  if (stock === undefined) return "♾️ Stock illimité";
+  if (stock <= 0) return "⛔ Épuisé";
+  if (stock <= 3) return `⚠️ Plus que ${stock}`;
+  return `📦 ${stock} en stock`;
+}
+
 const command: Command = {
   data: new SlashCommandBuilder()
     .setName("boutique")
@@ -72,10 +87,77 @@ const command: Command = {
     }
     if (sub === "afficher") {
       const articles = await articleStore.get(guildId);
-      const description = articles.length
-        ? articles.map((article) => `**${article.name}** — ${article.description}\nID: \`${article.id}\` · **${article.price} Orëlyss** · ${article.stock === undefined ? "illimité" : article.stock > 0 ? `${article.stock} restant(s)` : "ÉPUISÉ"}`).join("\n\n")
-        : "La boutique est vide.";
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xe67e22).setTitle("Boutique").setDescription(description.slice(0, 4000))] });
+      const [profile, objects] = await Promise.all([
+        profileStore.get(guildId, interaction.user.id),
+        objectStore.get(guildId),
+      ]);
+      const objectById = new Map(objects.map((object) => [object.id, object]));
+      const pageCount = Math.max(1, Math.ceil(articles.length / ARTICLES_PER_EMBED));
+      const pages: EmbedBuilder[] = [];
+
+      for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+        const pageArticles = articles.slice(
+          pageIndex * ARTICLES_PER_EMBED,
+          (pageIndex + 1) * ARTICLES_PER_EMBED,
+        );
+        const guildIcon = interaction.guild?.iconURL({ size: 256 });
+        const embed = new EmbedBuilder()
+          .setColor(0x8e73d7)
+          .setTitle("✦ Boutique d’Angel ✦")
+          .setDescription(
+            articles.length
+              ? [
+                "Une sélection d’objets à échanger contre des **Orëlyss**.",
+                "",
+                `🪙 **Ton solde :** ${profile.orelyss.toLocaleString("fr-FR")} Orëlyss`,
+                "Pour acheter, utilise `/boutique acheter` avec l’ID affiché.",
+              ].join("\n")
+              : "La boutique est encore vide. L’équipe pourra bientôt y ajouter des articles.",
+          )
+          .setFooter({
+            text: `${articles.length} article${articles.length === 1 ? "" : "s"} • Page ${pageIndex + 1}/${pageCount}`,
+          });
+        if (interaction.guild) {
+          embed.setAuthor({
+            name: interaction.guild.name,
+            ...(guildIcon ? { iconURL: guildIcon } : {}),
+          });
+        }
+        const thumbnail = guildIcon ?? interaction.client.user?.displayAvatarURL();
+        if (thumbnail) embed.setThumbnail(thumbnail);
+
+        pageArticles.forEach((article, index) => {
+          const object = article.objectId ? objectById.get(article.objectId) : undefined;
+          const itemNumber = (pageIndex * ARTICLES_PER_EMBED + index + 1)
+            .toString()
+            .padStart(2, "0");
+          const name = compactText(article.name, 72);
+          const description = compactText(article.description, 155) || "Un objet du catalogue.";
+          const price = article.price.toLocaleString("fr-FR");
+          embed.addFields({
+            name: `${itemNumber} · ${object?.emoji ?? "🛍️"} ${name}`.slice(0, 256),
+            value: [
+              description,
+              "",
+              `🪙 **${price} Orëlyss** · ${stockLabel(article.stock)}`,
+              `ID : \`${article.id}\``,
+            ].join("\n"),
+            inline: true,
+          });
+        });
+        pages.push(embed);
+      }
+
+      await interaction.reply({
+        embeds: pages.slice(0, 10),
+        allowedMentions: { parse: [] },
+      });
+      for (let start = 10; start < pages.length; start += 10) {
+        await interaction.followUp({
+          embeds: pages.slice(start, start + 10),
+          allowedMentions: { parse: [] },
+        });
+      }
       return;
     }
     if (sub === "acheter") {

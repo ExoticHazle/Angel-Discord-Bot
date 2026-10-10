@@ -1,13 +1,12 @@
-import { Events, type GuildMember } from "discord.js";
-import { autoroleStore } from "../utils/store.js";
+import { ChannelType, Events, type GuildMember } from "discord.js";
+import { autoroleStore, communityConfigStore } from "../utils/store.js";
+import { DEFAULT_WELCOME_TEMPLATE, renderWelcomeMessage } from "../utils/welcome.js";
 
 export default {
   name: Events.GuildMemberAdd,
   once: false,
   async execute(member: GuildMember) {
     const roleIds = autoroleStore.get(member.guild.id);
-    if (!roleIds || roleIds.length === 0) return;
-
     for (const roleId of roleIds) {
       try {
         await member.roles.add(roleId);
@@ -16,5 +15,31 @@ export default {
         console.error(`[Autorole] Impossible d'ajouter le rôle ${roleId} à ${member.user.tag}:`, err);
       }
     }
+
+    let config;
+    try {
+      config = await communityConfigStore.get(member.guild.id);
+    } catch (err) {
+      console.error(`[Welcome] Impossible de lire la configuration de ${member.guild.name}:`, err);
+      return;
+    }
+    if (!config.welcomeChannelId) return;
+
+    const channel = await member.guild.channels.fetch(config.welcomeChannelId).catch(() => null);
+    if (!channel || channel.type !== ChannelType.GuildText) {
+      console.error(`[Welcome] Le salon configuré est introuvable ou n'est pas un salon texte.`);
+      return;
+    }
+
+    const content = renderWelcomeMessage(
+      config.welcomeMessage ?? DEFAULT_WELCOME_TEMPLATE,
+      member,
+    );
+    await channel.send({
+      content,
+      allowedMentions: { parse: [], users: [member.id] },
+    }).catch((err) => {
+      console.error(`[Welcome] Impossible d'envoyer le message à ${channel.name}:`, err);
+    });
   },
 };

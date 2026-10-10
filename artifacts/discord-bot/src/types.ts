@@ -43,6 +43,8 @@ export interface GuildCommunityConfig {
   quotaRoles: Record<string, number>;
   quotaAdminChannelId?: string;
   levelsChannelId?: string;
+  welcomeChannelId?: string;
+  welcomeMessage?: string;
   quotaPeriodKey?: string;
   quotaReminderKey?: string;
 }
