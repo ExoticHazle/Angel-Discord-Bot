@@ -2,6 +2,7 @@ import { EmbedBuilder, SlashCommandBuilder, type ChatInputCommandInteraction } f
 import type { Command } from "../types.js";
 import { profileStore } from "../utils/store.js";
 import { parisDateKey, previousParisDateKey } from "../utils/time.js";
+import { orelyssIconAttachment, withOrelyssIcon } from "../utils/currency.js";
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -20,14 +21,16 @@ const command: Command = {
       return;
     }
 
-    await interaction.reply({
-      embeds: [
-        new EmbedBuilder()
+    const embed = withOrelyssIcon(
+      new EmbedBuilder()
           .setColor(0x2ecc71)
           .setTitle("Daily récolté")
-          .setDescription(`Vous avez récolté **${result.amount} Orëlyss** 🪙\nVotre streak est de **${result.profile.dailyStreak} jour(s)**.`)
-          .setFooter({ text: "Le daily se réinitialise chaque jour à minuit, heure de Paris." }),
-      ],
+          .setDescription(`Vous avez récolté **${result.amount} Orëlyss**\nVotre streak est de **${result.profile.dailyStreak} jour(s)**.`),
+      "Daily • réinitialisé chaque jour à minuit, heure de Paris",
+    );
+    await interaction.reply({
+      embeds: [embed],
+      files: [orelyssIconAttachment()],
     });
   },
 };

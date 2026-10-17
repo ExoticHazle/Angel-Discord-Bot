@@ -1,0 +1,32 @@
+node --input-type=module <<'EOF'
+const token = process.env.DISCORD_BOT_TOKEN;
+const app = process.env.DISCORD_CLIENT_ID;
+const guild = process.env.DISCORD_GUILD_ID;
+
+if (!token || !app || !guild) {
+  console.log("❌ Configuration Discord incomplète");
+  process.exit(1);
+}
+
+const headers = { Authorization: `Bot ${token}` };
+
+const bot = await fetch(
+  "https://discord.com/api/v10/users/@me",
+  { headers }
+).then(r => r.json());
+
+const response = await fetch(
+  `https://discord.com/api/v10/applications/${app}/guilds/${guild}/commands`,
+  { headers }
+);
+const commands = await response.json();
+
+console.log("ID du bot :", bot.id);
+console.log("ID de l'application :", app);
+console.log(
+  "Commandes enregistrées :",
+  Array.isArray(commands)
+    ? commands.length
+    : `Erreur ${response.status}: ${commands.message}`
+);
+EOF

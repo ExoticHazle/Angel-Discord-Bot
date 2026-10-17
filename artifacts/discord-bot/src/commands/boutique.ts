@@ -8,6 +8,7 @@ import {
 import { randomUUID } from "node:crypto";
 import type { Command } from "../types.js";
 import { articleStore, objectStore, profileStore } from "../utils/store.js";
+import { orelyssIconAttachment, withOrelyssIcon } from "../utils/currency.js";
 
 const ARTICLES_PER_EMBED = 12;
 
@@ -22,6 +23,24 @@ function stockLabel(stock: number | undefined) {
   if (stock <= 0) return "⛔ Épuisé";
   if (stock <= 3) return `⚠️ Plus que ${stock}`;
   return `📦 ${stock} en stock`;
+}
+
+async function editCurrencyReply(
+  interaction: ChatInputCommandInteraction,
+  title: string,
+  description: string,
+  color = 0x8e73d7,
+) {
+  await interaction.editReply({
+    embeds: [
+      withOrelyssIcon(
+        new EmbedBuilder().setColor(color).setTitle(title).setDescription(description),
+        "Monnaie • Orëlyss",
+      ),
+    ],
+    files: [orelyssIconAttachment()],
+    allowedMentions: { parse: [] },
+  });
 }
 
 const command: Command = {
@@ -110,14 +129,11 @@ const command: Command = {
               ? [
                 "Une sélection d’objets à échanger contre des **Orëlyss**.",
                 "",
-                `🪙 **Ton solde :** ${profile.orelyss.toLocaleString("fr-FR")} Orëlyss`,
+                `**Ton solde :** ${profile.orelyss.toLocaleString("fr-FR")} Orëlyss`,
                 "Pour acheter, utilise `/boutique acheter` avec l’ID affiché.",
               ].join("\n")
               : "La boutique est encore vide. L’équipe pourra bientôt y ajouter des articles.",
-          )
-          .setFooter({
-            text: `${articles.length} article${articles.length === 1 ? "" : "s"} • Page ${pageIndex + 1}/${pageCount}`,
-          });
+          );
         if (interaction.guild) {
           embed.setAuthor({
             name: interaction.guild.name,
@@ -140,23 +156,29 @@ const command: Command = {
             value: [
               description,
               "",
-              `🪙 **${price} Orëlyss** · ${stockLabel(article.stock)}`,
+              `**${price} Orëlyss** · ${stockLabel(article.stock)}`,
               ...(object?.roleId ? [`🎭 **Rôle offert :** <@&${object.roleId}>`] : []),
               `ID : \`${article.id}\``,
             ].join("\n"),
             inline: true,
           });
         });
+        withOrelyssIcon(
+          embed,
+          `${articles.length} article${articles.length === 1 ? "" : "s"} • Page ${pageIndex + 1}/${pageCount}`,
+        );
         pages.push(embed);
       }
 
       await interaction.reply({
         embeds: pages.slice(0, 10),
+        files: [orelyssIconAttachment()],
         allowedMentions: { parse: [] },
       });
       for (let start = 10; start < pages.length; start += 10) {
         await interaction.followUp({
           embeds: pages.slice(start, start + 10),
+          files: [orelyssIconAttachment()],
           allowedMentions: { parse: [] },
         });
       }
@@ -190,7 +212,12 @@ const command: Command = {
           return;
         }
         if (member.roles.cache.has(role.id)) {
-          await interaction.editReply("❌ Tu possèdes déjà le rôle offert par cet article. Aucun Orëlyss débité.");
+          await editCurrencyReply(
+            interaction,
+            "Achat non effectué",
+            "❌ Tu possèdes déjà le rôle offert par cet article. Aucun Orëlyss n’a été débité.",
+            0xe67e22,
+          );
           return;
         }
         rewardRole = role;
@@ -205,7 +232,11 @@ const command: Command = {
         already_owned: "❌ Tu possèdes déjà cet objet offrant un rôle. Aucun Orëlyss débité.",
       } as const;
       if (!result.ok) {
-        await interaction.editReply(messages[result.reason]);
+        if (result.reason === "funds" || result.reason === "already_owned") {
+          await editCurrencyReply(interaction, "Achat non effectué", messages[result.reason], 0xe67e22);
+        } else {
+          await interaction.editReply(messages[result.reason]);
+        }
         return;
       }
 
@@ -215,9 +246,16 @@ const command: Command = {
           const member = await guild.members.fetch({ user: interaction.user.id, force: true });
           if (member.roles.cache.has(rewardRole.id)) {
             const refunded = await articleStore.refundRolePurchase(guildId, result.log, result.article.objectId);
-            await interaction.editReply(refunded
-              ? "❌ Tu possèdes déjà ce rôle. Ton achat a été annulé et remboursé."
-              : "⚠️ Rôle déjà possédé. Vérifie ton solde et contacte un administrateur.");
+            if (refunded) {
+              await editCurrencyReply(
+                interaction,
+                "Achat remboursé",
+                "❌ Tu possèdes déjà ce rôle. Ton achat a été annulé et tes Orëlyss ont été remboursés.",
+                0xe67e22,
+              );
+            } else {
+              await interaction.editReply("⚠️ Rôle déjà possédé. Vérifie ton solde et contacte un administrateur.");
+            }
             return;
           }
           await member.roles.add(rewardRole, `Achat boutique : ${result.article.name}`);
@@ -227,10 +265,12 @@ const command: Command = {
           // Dans ce cas l'achat est bien honoré, on ne rembourse pas.
           const memberAfterError = await guild.members.fetch({ user: interaction.user.id, force: true }).catch(() => null);
           if (memberAfterError?.roles.cache.has(rewardRole.id)) {
-            await interaction.editReply({
-              content: `✅ Achat effectué : **${result.article.name}** pour ${result.article.price} Orëlyss.\n🎭 Tu as reçu <@&${rewardRole.id}> !`,
-              allowedMentions: { parse: [] },
-            });
+            await editCurrencyReply(
+              interaction,
+              "Achat confirmé",
+              `✅ **${result.article.name}** acheté pour ${result.article.price.toLocaleString("fr-FR")} Orëlyss.\n🎭 Tu as reçu le rôle <@&${rewardRole.id}> !`,
+              0x2ecc71,
+            );
             return;
           }
           let refunded = false;
@@ -239,18 +279,31 @@ const command: Command = {
           } catch (refundError) {
             console.error(`[Boutique] Remboursement de l'achat ${result.log.id} échoué :`, refundError);
           }
-          await interaction.editReply(refunded
-            ? "❌ Le rôle n'a pas pu être attribué. L'achat a été annulé et tes Orëlyss ont été remboursés."
-            : "⚠️ Impossible d'attribuer le rôle ou de confirmer le remboursement. Contacte un administrateur avec cet ID d'achat : `" + result.log.id + "`.");
+          if (refunded) {
+            await editCurrencyReply(
+              interaction,
+              "Achat remboursé",
+              "❌ Le rôle n’a pas pu être attribué. L’achat a été annulé et tes Orëlyss ont été remboursés.",
+              0xe67e22,
+            );
+          } else {
+            await interaction.editReply(
+              "⚠️ Impossible d'attribuer le rôle ou de confirmer le remboursement. Contacte un administrateur avec cet ID d'achat : `" +
+                result.log.id +
+                "`.",
+            );
+          }
           return;
         }
       }
 
-      await interaction.editReply({
-        content: `✅ Achat effectué : **${result.article.name}** pour ${result.article.price} Orëlyss.` +
+      await editCurrencyReply(
+        interaction,
+        "Achat confirmé",
+        `✅ **${result.article.name}** acheté pour ${result.article.price.toLocaleString("fr-FR")} Orëlyss.` +
           (rewardRole ? `\n🎭 Tu as reçu le rôle <@&${rewardRole.id}> !` : ""),
-        allowedMentions: { parse: [] },
-      });
+        0x2ecc71,
+      );
       if (result.article.stock === 0) {
         const owners = await guild.fetchOwner().catch(() => null);
         await owners?.send(`⚠️ L'article **${result.article.name}** est épuisé sur ${guild.name}.`).catch(() => null);
@@ -326,9 +379,21 @@ const command: Command = {
     }
     const logs = await articleStore.purchases(guildId);
     await interaction.reply({
-      content: logs.length
-        ? logs.map((log) => `• ${log.userTag} — **${log.articleName}** — ${log.price} Orëlyss — <t:${Math.floor(log.timestamp / 1000)}:R>`).join("\n")
-        : "Aucun achat enregistré.",
+      embeds: [
+        withOrelyssIcon(
+          new EmbedBuilder()
+            .setColor(0x5865f2)
+            .setTitle("Logs d’achat")
+            .setDescription(
+              logs.length
+                ? logs.map((log) => `• ${log.userTag} — **${log.articleName}** — ${log.price.toLocaleString("fr-FR")} Orëlyss — <t:${Math.floor(log.timestamp / 1000)}:R>`).join("\n").slice(0, 3900)
+                : "Aucun achat enregistré.",
+            ),
+          `${logs.length} achat${logs.length === 1 ? "" : "s"} • Monnaie Orëlyss`,
+        ),
+      ],
+      files: [orelyssIconAttachment()],
+      allowedMentions: { parse: [] },
       ephemeral: true,
     });
   },

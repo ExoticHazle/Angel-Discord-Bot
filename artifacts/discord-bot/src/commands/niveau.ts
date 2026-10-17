@@ -5,6 +5,7 @@ import {
 } from "discord.js";
 import type { Command } from "../types.js";
 import { profileStore } from "../utils/store.js";
+import { orelyssIconAttachment, withOrelyssIcon } from "../utils/currency.js";
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -24,20 +25,27 @@ const command: Command = {
       const user = interaction.options.getUser("membre") ?? interaction.user;
       const profile = await profileStore.get(guildId, user.id);
       const needed = 100 * (profile.level + 1);
-      const embed = new EmbedBuilder()
-        .setColor(0x9b59b6)
-        .setTitle(`Niveau de ${user.tag}`)
-        .setThumbnail(user.displayAvatarURL())
-        .setDescription(
-          profile.level === 0
-            ? "Votre niveau s'affichera après votre première ascension."
-            : `Niveau **${profile.level}**`,
-        )
-        .addFields(
-          { name: "XP", value: `${profile.xp}/${needed}`, inline: true },
-          { name: "Orëlyss", value: `${profile.orelyss} 🪙`, inline: true },
-        );
-      await interaction.reply({ embeds: [embed], ephemeral: user.id === interaction.user.id });
+      const embed = withOrelyssIcon(
+        new EmbedBuilder()
+          .setColor(0x9b59b6)
+          .setTitle(`Niveau de ${user.tag}`)
+          .setThumbnail(user.displayAvatarURL())
+          .setDescription(
+            profile.level === 0
+              ? "Votre niveau s'affichera après votre première ascension."
+              : `Niveau **${profile.level}**`,
+          )
+          .addFields(
+            { name: "XP", value: `${profile.xp}/${needed}`, inline: true },
+            { name: "Orëlyss", value: profile.orelyss.toLocaleString("fr-FR"), inline: true },
+          ),
+        "Solde en Orëlyss",
+      );
+      await interaction.reply({
+        embeds: [embed],
+        files: [orelyssIconAttachment()],
+        ephemeral: user.id === interaction.user.id,
+      });
       return;
     }
 

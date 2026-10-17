@@ -11,6 +11,7 @@ import {
   questStore,
 } from "./store.js";
 import type { Quest, QuestActivity } from "../types.js";
+import { orelyssIconAttachment, withOrelyssIcon } from "./currency.js";
 
 async function sendLevelUp(guild: Guild, user: User, level: number, orelyss: number) {
   const channelId = (await communityConfigStore.get(guild.id)).levelsChannelId;
@@ -18,20 +19,26 @@ async function sendLevelUp(guild: Guild, user: User, level: number, orelyss: num
   const channel = await guild.channels.fetch(channelId).catch(() => null);
   if (!channel?.isTextBased()) return;
 
-  const embed = new EmbedBuilder()
-    .setColor(0x9b59b6)
-    .setDescription(
-      "╭─────────────────────────────✦\n\n" +
-      "🌠 **ASCENSION CÉLESTE**\n\n" +
-      `${user} vient d’atteindre le **Niveau ${level}** ! ✨\n\n` +
-      `✧ **+${orelyss} Orëlyss** 🪙\n\n` +
-      "« Une nouvelle étoile vient de s’éveiller dans les cieux 💫 »\n\n" +
-      "╰─────────────────────────────✦",
-    )
-    .setThumbnail(user.displayAvatarURL())
-    .setTimestamp();
+  const embed = withOrelyssIcon(
+    new EmbedBuilder()
+      .setColor(0x9b59b6)
+      .setDescription(
+        "╭─────────────────────────────✦\n\n" +
+        "🌠 **ASCENSION CÉLESTE**\n\n" +
+        `${user} vient d’atteindre le **Niveau ${level}** ! ✨\n\n` +
+        `✧ **+${orelyss.toLocaleString("fr-FR")} Orëlyss**\n\n` +
+        "« Une nouvelle étoile vient de s’éveiller dans les cieux 💫 »\n\n" +
+        "╰─────────────────────────────✦",
+      )
+      .setThumbnail(user.displayAvatarURL())
+      .setTimestamp(),
+    "Récompense en Orëlyss",
+  );
 
-  await channel.send({ embeds: [embed] }).catch(() => null);
+  await channel.send({
+    embeds: [embed],
+    files: [orelyssIconAttachment()],
+  }).catch(() => null);
 }
 
 async function rewardQuest(guild: Guild, user: User, quest: Quest) {
@@ -40,7 +47,7 @@ async function rewardQuest(guild: Guild, user: User, quest: Quest) {
   if (quest.rewardType === "orelyss") {
     const amount = Number(quest.rewardValue) || 0;
     await profileStore.addOrelyss(guild.id, user.id, amount);
-    rewardText = `${amount} Orëlyss 🪙`;
+    rewardText = `${amount.toLocaleString("fr-FR")} Orëlyss`;
   } else if (quest.rewardType === "xp") {
     const amount = Number(quest.rewardValue) || 0;
     const result = await profileStore.addXp(guild.id, user.id, amount);
@@ -68,12 +75,28 @@ async function rewardQuest(guild: Guild, user: User, quest: Quest) {
     }
   }
 
-  await user
-    .send(
-      `✅ Quête accomplie sur **${guild.name}** !\n` +
-      `**${quest.name}**\nRécompense : ${rewardText}`,
-    )
-    .catch(() => null);
+  if (quest.rewardType === "orelyss") {
+    const embed = withOrelyssIcon(
+      new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle("Quête accomplie")
+        .setDescription(
+          `✅ Quête accomplie sur **${guild.name}** !\n**${quest.name}**\nRécompense : **${rewardText}**`,
+        ),
+      "Récompense en Orëlyss",
+    );
+    await user.send({
+      embeds: [embed],
+      files: [orelyssIconAttachment()],
+    }).catch(() => null);
+  } else {
+    await user
+      .send(
+        `✅ Quête accomplie sur **${guild.name}** !\n` +
+        `**${quest.name}**\nRécompense : ${rewardText}`,
+      )
+      .catch(() => null);
+  }
 }
 
 export async function recordActivity(

@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -45,3 +45,6 @@ timeoutMs = 20000
 [userenv.shared]
 DISCORD_CLIENT_ID = "1551214895633137814"
 DISCORD_GUILD_ID = "1509290689681297549"
+
+[nix]
+channel = "stable-25_05"
