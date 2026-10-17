@@ -110,7 +110,7 @@ async function resetQuotas(guild: Guild) {
     const missed = profile.quotaMessages < quota;
     if (missed) {
       const reason = `Quota non respecté : ${profile.quotaMessages}/${quota} messages`;
-      staffWarnsStore.add(`${guild.id}-${member.id}`, {
+      await staffWarnsStore.add(`${guild.id}-${member.id}`, {
         moderator: "Angel — système automatique",
         moderatorId: guild.client.user?.id ?? "system",
         reason,

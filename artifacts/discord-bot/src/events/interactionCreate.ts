@@ -12,8 +12,7 @@ import {
   type GuildMember,
 } from "discord.js";
 import type { Command } from "../types.js";
-import { openTickets } from "../types.js";
-import { historyStore, autoroleStore } from "../utils/store.js";
+import { historyStore, autoroleStore, ticketStore } from "../utils/store.js";
 import { closeTicket } from "../utils/closeTicket.js";
 
 export default {
@@ -79,15 +78,16 @@ export default {
     if (interaction.customId === "ticket_create") {
       const guild = interaction.guild!;
       const userId = interaction.user.id;
-      const key = `${guild.id}-${userId}`;
-
-      const existing = openTickets.get(key);
-      if (existing) {
-        await interaction.reply({ content: `❌ Vous avez déjà un ticket ouvert : <#${existing}>`, flags: 64 });
-        return;
-      }
-
       await interaction.deferReply({ flags: 64 });
+      const existing = ticketStore.get(guild.id, userId);
+      if (existing) {
+        const existingChannel = await guild.channels.fetch(existing).catch(() => null);
+        if (existingChannel?.name.startsWith("ticket-")) {
+          await interaction.editReply(`❌ Vous avez déjà un ticket ouvert : <#${existing}>`);
+          return;
+        }
+        await ticketStore.removeByChannel(existing);
+      }
 
       const category = guild.channels.cache.find(
         (c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase().includes("ticket")
@@ -97,7 +97,7 @@ export default {
         name: `ticket-${interaction.user.username}`,
         type: ChannelType.GuildText,
         parent: category?.id,
-        topic: `Ticket de ${interaction.user.tag}`,
+        topic: `Ticket de ${interaction.user.tag} | User ID: ${userId}`,
         permissionOverwrites: [
           { id: guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
           {
@@ -116,9 +116,9 @@ export default {
         ],
       }) as TextChannel;
 
-      openTickets.set(key, ticketChannel.id);
+      await ticketStore.set(guild.id, userId, ticketChannel.id);
 
-      historyStore.add({
+      await historyStore.add({
         type: "ticket_open",
         guildId: guild.id,
         targetId: interaction.user.id,
@@ -156,7 +156,7 @@ export default {
         return;
       }
 
-      historyStore.add({
+      await historyStore.add({
         type: "ticket_close",
         guildId: interaction.guildId!,
         targetId: interaction.user.id,

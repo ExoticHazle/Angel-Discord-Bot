@@ -4,7 +4,7 @@ import { observeVoiceStateUpdate } from "../utils/scheduler.js";
 export default {
   name: Events.VoiceStateUpdate,
   once: false,
-  execute(previous: VoiceState, current: VoiceState) {
-    observeVoiceStateUpdate(previous, current);
+  async execute(previous: VoiceState, current: VoiceState) {
+    await observeVoiceStateUpdate(previous, current);
   },
 };

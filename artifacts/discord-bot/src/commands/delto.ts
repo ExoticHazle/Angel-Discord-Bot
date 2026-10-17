@@ -37,7 +37,7 @@ const command: Command = {
 
     await member.timeout(null, raison);
 
-    historyStore.add({
+    await historyStore.add({
       type: "untimeout",
       guildId: interaction.guildId!,
       targetId: member.user.id,

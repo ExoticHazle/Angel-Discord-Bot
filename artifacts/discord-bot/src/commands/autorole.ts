@@ -38,7 +38,7 @@ const command: Command = {
 
     if (sub === "add") {
       const role = interaction.options.getRole("role", true);
-      const added = autoroleStore.add(guildId, role.id);
+      const added = await autoroleStore.add(guildId, role.id);
 
       if (!added) {
         await interaction.reply({ content: "❌ Ce rôle est déjà dans les autoroles.", ephemeral: true });
@@ -55,7 +55,7 @@ const command: Command = {
 
     } else if (sub === "remove") {
       const role = interaction.options.getRole("role", true);
-      const removed = autoroleStore.remove(guildId, role.id);
+      const removed = await autoroleStore.remove(guildId, role.id);
 
       if (!removed) {
         await interaction.reply({ content: "❌ Ce rôle n'est pas dans les autoroles.", ephemeral: true });

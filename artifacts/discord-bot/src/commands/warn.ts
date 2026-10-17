@@ -34,10 +34,10 @@ const command: Command = {
     if (sub === "add") {
       const raison = interaction.options.getString("raison", true);
       const entry = { moderator: interaction.user.tag, reason: raison, timestamp: Date.now() };
-      warnsStore.add(key, entry);
+      await warnsStore.add(key, entry);
       const warns = warnsStore.get(key);
 
-      historyStore.add({
+      await historyStore.add({
         type: "warn",
         guildId: interaction.guildId!,
         targetId: target.id,
@@ -92,7 +92,7 @@ const command: Command = {
       await interaction.reply({ embeds: [embed], ephemeral: true });
 
     } else if (sub === "clear") {
-      warnsStore.clear(key);
+      await warnsStore.clear(key);
       await interaction.reply({ content: `✅ Tous les avertissements de ${target.tag} ont été effacés.`, ephemeral: true });
     }
   },

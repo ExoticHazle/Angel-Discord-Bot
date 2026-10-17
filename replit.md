@@ -49,9 +49,9 @@ Le message d'arrivée se configure avec `/bienvenue configurer` en choisissant u
 
 ## Données et règles
 
-- Les profils, monnaies, inventaires, quêtes, achats, notes et configurations de quota/bienvenue sont conservés en PostgreSQL.
-- Les autorôles et les réglages du règlement restent dans les fichiers de données suivis par Git ; les historiques et avertissements staff y sont également conservés.
-- Ne jamais réinitialiser les quotas, rôles ou autres données de serveur lors d’une modification du bot. Les changements de schéma doivent être additifs et préserver les lignes PostgreSQL ainsi que les fichiers de données existants.
+- Les profils, monnaies, inventaires, quêtes, achats, notes, configurations, autorôles, règlements, avertissements, historiques et tickets ouverts sont conservés en PostgreSQL.
+- Les anciens fichiers JSON sont importés sans écraser les données déjà présentes dans PostgreSQL et restent conservés comme sauvegarde.
+- Ne jamais réinitialiser les données de serveur lors d’un redémarrage ou d’une modification du code. Les changements de schéma doivent être additifs et préserver les données PostgreSQL et les sauvegardes existantes.
 - Les daily et les quotas suivent le fuseau `Europe/Paris`.
 - Les quotas se réinitialisent toutes les deux semaines le dimanche ; le rappel est envoyé le dimanche précédent.
 - Le niveau 0 est conservé en interne, mais n'est pas affiché dans le profil ni le classement.

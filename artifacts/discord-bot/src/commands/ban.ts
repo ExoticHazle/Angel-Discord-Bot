@@ -61,7 +61,7 @@ const command: Command = {
 
     await member.ban({ deleteMessageDays: jours as 0|1|2|3|4|5|6|7, reason: raison });
 
-    historyStore.add({
+    await historyStore.add({
       type: "ban",
       guildId: interaction.guildId!,
       targetId: member.user.id,

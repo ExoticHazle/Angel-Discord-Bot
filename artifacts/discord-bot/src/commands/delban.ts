@@ -40,7 +40,7 @@ const command: Command = {
 
     await interaction.guild!.members.unban(userId, raison);
 
-    historyStore.add({
+    await historyStore.add({
       type: "unban",
       guildId: interaction.guildId!,
       targetId: bannedUser.user.id,

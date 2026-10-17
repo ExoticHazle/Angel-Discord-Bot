@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { and, asc, desc, eq } from "drizzle-orm";
@@ -7,6 +7,7 @@ import {
   communityConfigsTable,
   communityNotesTable,
   db,
+  discordRuntimeStateTable,
   purchaseLogsTable,
   questsTable,
   serverObjectsTable,
@@ -30,8 +31,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, "../../data");
 const COMMUNITY_FILE = "community.json";
 
-if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-
 function loadJson<T>(file: string, fallback: T): T {
   const path = join(DATA_DIR, file);
   if (!existsSync(path)) return fallback;
@@ -42,35 +41,34 @@ function loadJson<T>(file: string, fallback: T): T {
   }
 }
 
-function saveJson(file: string, data: unknown) {
-  writeFileSync(join(DATA_DIR, file), JSON.stringify(data, null, 2), "utf-8");
-}
-
 // ── Autoroles ────────────────────────────────────────────────────────
 const autoroles = loadJson<Record<string, string[]>>("autoroles.json", {});
 
 export const autoroleStore = {
   get(guildId: string): string[] {
-    return autoroles[guildId] ?? [];
+    return [...(autoroles[guildId] ?? [])];
   },
-  set(guildId: string, roleIds: string[]) {
-    autoroles[guildId] = roleIds;
-    saveJson("autoroles.json", autoroles);
+  set(guildId: string, roleIds: string[]): Promise<void> {
+    return updateRuntimeState("autoroles", () => {
+      autoroles[guildId] = [...roleIds];
+    });
   },
-  add(guildId: string, roleId: string): boolean {
-    const roles = this.get(guildId);
-    if (roles.includes(roleId)) return false;
-    roles.push(roleId);
-    this.set(guildId, roles);
-    return true;
+  add(guildId: string, roleId: string): Promise<boolean> {
+    return updateRuntimeState("autoroles", () => {
+      const roles = autoroles[guildId] ?? [];
+      if (roles.includes(roleId)) return false;
+      autoroles[guildId] = [...roles, roleId];
+      return true;
+    });
   },
-  remove(guildId: string, roleId: string): boolean {
-    const roles = this.get(guildId);
+  remove(guildId: string, roleId: string): Promise<boolean> {
+    return updateRuntimeState("autoroles", () => {
+      const roles = autoroles[guildId] ?? [];
     const index = roles.indexOf(roleId);
     if (index === -1) return false;
-    roles.splice(index, 1);
-    this.set(guildId, roles);
-    return true;
+      autoroles[guildId] = roles.filter((id) => id !== roleId);
+      return true;
+    });
   },
 };
 
@@ -79,20 +77,23 @@ const warns = loadJson<Record<string, WarnEntry[]>>("warns.json", {});
 
 export const warnsStore = {
   get(key: string): WarnEntry[] {
-    return warns[key] ?? [];
+    return [...(warns[key] ?? [])];
   },
-  add(key: string, entry: WarnEntry) {
-    if (!warns[key]) warns[key] = [];
-    warns[key].push(entry);
-    saveJson("warns.json", warns);
+  add(key: string, entry: WarnEntry): Promise<void> {
+    return updateRuntimeState("warns", () => {
+      if (!warns[key]) warns[key] = [];
+      warns[key].push(entry);
+    });
   },
-  set(key: string, entries: WarnEntry[]) {
-    warns[key] = entries;
-    saveJson("warns.json", warns);
+  set(key: string, entries: WarnEntry[]): Promise<void> {
+    return updateRuntimeState("warns", () => {
+      warns[key] = [...entries];
+    });
   },
-  clear(key: string) {
-    delete warns[key];
-    saveJson("warns.json", warns);
+  clear(key: string): Promise<void> {
+    return updateRuntimeState("warns", () => {
+      delete warns[key];
+    });
   },
 };
 
@@ -116,22 +117,25 @@ export const reglementStore = {
   get(guildId: string): string | undefined {
     return reglement.texts?.[guildId];
   },
-  set(guildId: string, texte: string) {
-    if (!reglement.texts) reglement.texts = {};
-    reglement.texts[guildId] = texte;
-    saveJson("reglement.json", reglement);
+  set(guildId: string, texte: string): Promise<void> {
+    return updateRuntimeState("reglement", () => {
+      if (!reglement.texts) reglement.texts = {};
+      reglement.texts[guildId] = texte;
+    });
   },
-  delete(guildId: string) {
-    delete reglement.texts?.[guildId];
-    saveJson("reglement.json", reglement);
+  delete(guildId: string): Promise<void> {
+    return updateRuntimeState("reglement", () => {
+      delete reglement.texts?.[guildId];
+    });
   },
   getAcceptRole(guildId: string): string | undefined {
     return reglement.acceptRoles?.[guildId];
   },
-  setAcceptRole(guildId: string, roleId: string) {
-    if (!reglement.acceptRoles) reglement.acceptRoles = {};
-    reglement.acceptRoles[guildId] = roleId;
-    saveJson("reglement.json", reglement);
+  setAcceptRole(guildId: string, roleId: string): Promise<void> {
+    return updateRuntimeState("reglement", () => {
+      if (!reglement.acceptRoles) reglement.acceptRoles = {};
+      reglement.acceptRoles[guildId] = roleId;
+    });
   },
 };
 
@@ -140,11 +144,12 @@ const history = loadJson<Record<string, HistoryEntry[]>>("history.json", {});
 const MAX_PER_GUILD = 500;
 
 export const historyStore = {
-  add(entry: HistoryEntry) {
-    if (!history[entry.guildId]) history[entry.guildId] = [];
-    history[entry.guildId].unshift(entry);
-    history[entry.guildId] = history[entry.guildId].slice(0, MAX_PER_GUILD);
-    saveJson("history.json", history);
+  add(entry: HistoryEntry): Promise<void> {
+    return updateRuntimeState("history", () => {
+      if (!history[entry.guildId]) history[entry.guildId] = [];
+      history[entry.guildId].unshift(entry);
+      history[entry.guildId] = history[entry.guildId].slice(0, MAX_PER_GUILD);
+    });
   },
   getForGuild(guildId: string, limit = 20): HistoryEntry[] {
     return (history[guildId] ?? []).slice(0, limit);
@@ -159,16 +164,114 @@ const staffWarns = loadJson<Record<string, StaffWarnEntry[]>>("staff-warns.json"
 
 export const staffWarnsStore = {
   get(key: string): StaffWarnEntry[] {
-    return staffWarns[key] ?? [];
+    return [...(staffWarns[key] ?? [])];
   },
-  add(key: string, entry: StaffWarnEntry) {
-    if (!staffWarns[key]) staffWarns[key] = [];
-    staffWarns[key].push(entry);
-    saveJson("staff-warns.json", staffWarns);
+  add(key: string, entry: StaffWarnEntry): Promise<void> {
+    return updateRuntimeState("staffWarns", () => {
+      if (!staffWarns[key]) staffWarns[key] = [];
+      staffWarns[key].push(entry);
+    });
   },
-  clear(key: string) {
-    delete staffWarns[key];
-    saveJson("staff-warns.json", staffWarns);
+  clear(key: string): Promise<void> {
+    return updateRuntimeState("staffWarns", () => {
+      delete staffWarns[key];
+    });
+  },
+};
+
+const openTickets: Record<string, string> = {};
+interface VoiceSessionCheckpoint {
+  channelId: string;
+  creditedMinutes: number;
+}
+const voiceSessionCheckpoints: Record<string, VoiceSessionCheckpoint> = {};
+
+const runtimeState = {
+  autoroles,
+  warns,
+  reglement,
+  history,
+  staffWarns,
+  openTickets,
+  voiceSessionCheckpoints,
+};
+
+type RuntimeStateKey = keyof typeof runtimeState;
+
+const runtimeStateWrites = new Map<RuntimeStateKey, Promise<void>>();
+
+function updateRuntimeState<T>(stateKey: RuntimeStateKey, update: () => T): Promise<T> {
+  let result!: T;
+  const previous = runtimeStateWrites.get(stateKey) ?? Promise.resolve();
+  const write = previous.catch(() => undefined).then(async () => {
+    result = update();
+    const stateValue = structuredClone(runtimeState[stateKey]) as Record<string, unknown>;
+    await db.insert(discordRuntimeStateTable)
+      .values({ stateKey, stateValue })
+      .onConflictDoUpdate({
+        target: discordRuntimeStateTable.stateKey,
+        set: { stateValue },
+      });
+  });
+  runtimeStateWrites.set(stateKey, write.then(() => undefined, () => undefined));
+  return write.then(() => result);
+}
+
+function replaceRuntimeState(target: object, persisted: unknown, stateKey: string) {
+  if (!persisted || typeof persisted !== "object" || Array.isArray(persisted)) {
+    throw new Error(`État persistant invalide pour « ${stateKey} ».`);
+  }
+  const record = target as Record<string, unknown>;
+  for (const key of Object.keys(record)) delete record[key];
+  Object.assign(record, persisted);
+}
+
+export const ticketStore = {
+  get(guildId: string, userId: string): string | undefined {
+    return openTickets[`${guildId}-${userId}`];
+  },
+  set(guildId: string, userId: string, channelId: string): Promise<void> {
+    return updateRuntimeState("openTickets", () => {
+      openTickets[`${guildId}-${userId}`] = channelId;
+    });
+  },
+  removeByChannel(channelId: string): Promise<void> {
+    return updateRuntimeState("openTickets", () => {
+      for (const [key, currentChannelId] of Object.entries(openTickets)) {
+        if (currentChannelId === channelId) delete openTickets[key];
+      }
+    });
+  },
+};
+
+function persistedVoiceSessionKey(guildId: string, userId: string) {
+  return `${guildId}:${userId}`;
+}
+
+export const voiceSessionStore = {
+  get(guildId: string, userId: string): VoiceSessionCheckpoint | undefined {
+    const checkpoint = voiceSessionCheckpoints[persistedVoiceSessionKey(guildId, userId)];
+    return checkpoint ? { ...checkpoint } : undefined;
+  },
+  set(
+    guildId: string,
+    userId: string,
+    checkpoint: VoiceSessionCheckpoint,
+  ): Promise<void> {
+    return updateRuntimeState("voiceSessionCheckpoints", () => {
+      voiceSessionCheckpoints[persistedVoiceSessionKey(guildId, userId)] = { ...checkpoint };
+    });
+  },
+  remove(guildId: string, userId: string): Promise<void> {
+    return this.removeByKey(persistedVoiceSessionKey(guildId, userId));
+  },
+  removeByKey(key: string): Promise<void> {
+    return updateRuntimeState("voiceSessionCheckpoints", () => {
+      delete voiceSessionCheckpoints[key];
+    });
+  },
+  entries(): Array<[string, VoiceSessionCheckpoint]> {
+    return Object.entries(voiceSessionCheckpoints).map(([key, value]) => [key, { ...value }]);
   },
 };
 
@@ -344,9 +447,8 @@ async function upsertProfile(executor: DbExecutor, profile: UserProfile) {
 }
 
 /**
- * Imports the legacy community file without replacing rows already in PostgreSQL.
- * Keeping the source file in place makes the migration retryable and preserves it
- * as a recoverable backup until the operator removes it.
+ * Imports legacy files without replacing rows already in PostgreSQL.
+ * Source files remain untouched as recoverable backups.
  */
 export async function initializeCommunityStore() {
   const seed = loadJson<CommunityData>(COMMUNITY_FILE, emptyCommunityData);
@@ -449,6 +551,23 @@ export async function initializeCommunityStore() {
           createdAt: purchase.timestamp,
         }).onConflictDoNothing();
       }
+    }
+
+    for (const stateKey of Object.keys(runtimeState) as RuntimeStateKey[]) {
+      const stateValue = structuredClone(runtimeState[stateKey]) as Record<string, unknown>;
+      await tx.insert(discordRuntimeStateTable)
+        .values({ stateKey, stateValue })
+        .onConflictDoNothing();
+    }
+
+    const persistedStates = await tx.select().from(discordRuntimeStateTable);
+    for (const row of persistedStates) {
+      if (!(row.stateKey in runtimeState)) continue;
+      replaceRuntimeState(
+        runtimeState[row.stateKey as RuntimeStateKey],
+        row.stateValue,
+        row.stateKey,
+      );
     }
   });
 }

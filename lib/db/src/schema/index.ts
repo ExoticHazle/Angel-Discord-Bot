@@ -11,6 +11,11 @@ export const communityConfigsTable = pgTable("discord_community_configs", {
   quotaReminderKey: text("quota_reminder_key"),
 });
 
+export const discordRuntimeStateTable = pgTable("discord_runtime_state", {
+  stateKey: text("state_key").primaryKey(),
+  stateValue: jsonb("state_value").$type<Record<string, unknown>>().notNull(),
+});
+
 export const userProfilesTable = pgTable("discord_user_profiles", {
   guildId: text("guild_id").notNull(),
   userId: text("user_id").notNull(),

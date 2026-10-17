@@ -74,7 +74,7 @@ const command: Command = {
     if (subcommand === "add") {
       const raison = interaction.options.getString("raison", true);
 
-      staffWarnsStore.add(key, {
+      await staffWarnsStore.add(key, {
         moderator: interaction.user.tag,
         moderatorId: interaction.user.id,
         reason: raison,
@@ -154,7 +154,7 @@ const command: Command = {
     }
 
     if (subcommand === "clear") {
-      staffWarnsStore.clear(key);
+      await staffWarnsStore.clear(key);
 
       await interaction.reply({
         content: `✅ Tous les avertissements staff de ${target} ont été supprimés.`,

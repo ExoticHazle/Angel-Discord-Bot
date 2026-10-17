@@ -9,7 +9,6 @@ import {
   type TextChannel,
 } from "discord.js";
 import type { Command } from "../types.js";
-import { openTickets } from "../types.js";
 import { closeTicket } from "../utils/closeTicket.js";
 
 const command: Command = {

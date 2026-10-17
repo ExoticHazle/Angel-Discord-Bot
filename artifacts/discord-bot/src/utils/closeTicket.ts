@@ -7,7 +7,7 @@ import {
   type TextChannel,
   type User,
 } from "discord.js";
-import { openTickets } from "../types.js";
+import { ticketStore } from "./store.js";
 
 export async function closeTicket(
   channel: TextChannel,
@@ -16,13 +16,7 @@ export async function closeTicket(
 ) {
   const username = channel.name.replace(/^ticket-/, "");
 
-  // Retirer du store
-  for (const [key, chanId] of openTickets.entries()) {
-    if (chanId === channel.id) {
-      openTickets.delete(key);
-      break;
-    }
-  }
+  await ticketStore.removeByChannel(channel.id);
 
   // 1. Envoyer l'embed + bouton supprimer EN PREMIER (avant tout verrouillage)
   const embed = new EmbedBuilder()

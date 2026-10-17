@@ -134,4 +134,3 @@ export interface HistoryEntry {
   timestamp: number;
 }
 
-export const openTickets = new Map<string, string>();

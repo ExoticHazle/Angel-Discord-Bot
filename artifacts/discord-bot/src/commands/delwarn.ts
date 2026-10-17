@@ -39,9 +39,9 @@ const command: Command = {
     }
 
     const removed = warns.splice(numero - 1, 1)[0];
-    warnsStore.set(key, warns);
+    await warnsStore.set(key, warns);
 
-    historyStore.add({
+    await historyStore.add({
       type: "delwarn",
       guildId: interaction.guildId!,
       targetId: target.id,

@@ -76,7 +76,7 @@ const command: Command = {
         return;
       }
       const texte = interaction.options.getString("texte", true).replace(/\\n/g, "\n");
-      reglementStore.set(guildId, texte);
+      await reglementStore.set(guildId, texte);
       await interaction.reply({ content: "✅ Règlement mis à jour avec succès.", ephemeral: true });
 
     } else if (sub === "setrole") {
@@ -85,7 +85,7 @@ const command: Command = {
         return;
       }
       const role = interaction.options.getRole("role", true);
-      reglementStore.setAcceptRole(guildId, role.id);
+      await reglementStore.setAcceptRole(guildId, role.id);
       await interaction.reply({ content: `✅ Rôle d'acceptation défini sur ${role}.`, ephemeral: true });
 
     } else if (sub === "reset") {
@@ -93,7 +93,7 @@ const command: Command = {
         await interaction.reply({ content: "❌ Permission insuffisante.", ephemeral: true });
         return;
       }
-      reglementStore.delete(guildId);
+      await reglementStore.delete(guildId);
       await interaction.reply({ content: "✅ Règlement réinitialisé aux valeurs par défaut.", ephemeral: true });
     }
   },

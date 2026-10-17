@@ -76,7 +76,7 @@ const command: Command = {
 
     await member.timeout(seconds * 1000, raison);
 
-    historyStore.add({
+    await historyStore.add({
       type: "timeout",
       guildId: interaction.guildId!,
       targetId: member.user.id,
