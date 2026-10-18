@@ -793,7 +793,7 @@ export const articleStore = {
   async update(
     guildId: string,
     id: string,
-    patch: Partial<Omit<ShopArticle, "stock">> & { stock?: number | null },
+    patch: Partial<Omit<ShopArticle, "stock" | "requiredRoleId">> & { stock?: number | null; requiredRoleId?: string | null },
   ) {
     const article = await this.getById(guildId, id);
     if (!article) return false;
