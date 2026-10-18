@@ -22,6 +22,8 @@ const command: Command = {
           value: [
             "`/autorole` — rôles automatiques",
             "`/dm` — envoyer un message privé",
+            "`/say` — faire écrire un message par Angel",
+            "`/test-commandes` — vérifier que le bot et ses commandes fonctionnent",
             "`/bienvenue` — configurer le message d’arrivée",
             "`/note` et `/notes` — gérer et consulter les notes",
             "`/objet creer|role|liste` — créer des objets et choisir les rôles offerts",
