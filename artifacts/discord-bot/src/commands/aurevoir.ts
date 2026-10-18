@@ -31,11 +31,18 @@ const command: Command = {
         return;
       }
       if (hasEveryoneMention(raw ?? "")) {
+        // Résoudre le salon complet : l'option d'interaction peut être un simple salon API
+        // qui n'expose pas permissionsFor() dans les types discord.js.
+        const targetChannel = await guild.channels.fetch(channel.id).catch(() => null);
+        if (!targetChannel || targetChannel.type !== ChannelType.GuildText) {
+          await interaction.reply({ content: "❌ Salon texte introuvable.", ephemeral: true });
+          return;
+        }
         const [author, bot] = await Promise.all([
           guild.members.fetch(interaction.user.id).catch(() => null),
           guild.members.fetchMe().catch(() => null),
         ]);
-        if (!author || !bot || !channel.permissionsFor(author)?.has(PermissionFlagsBits.MentionEveryone) || !channel.permissionsFor(bot)?.has(PermissionFlagsBits.MentionEveryone)) {
+        if (!author || !bot || !targetChannel.permissionsFor(author)?.has(PermissionFlagsBits.MentionEveryone) || !targetChannel.permissionsFor(bot)?.has(PermissionFlagsBits.MentionEveryone)) {
           await interaction.reply({ content: "❌ Pour utiliser @everyone ou @here, toi et Angel devez avoir la permission Mentionner @everyone dans ce salon.", ephemeral: true });
           return;
         }
