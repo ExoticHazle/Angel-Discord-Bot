@@ -37,6 +37,8 @@ const command: Command = {
         .addIntegerOption((option) => option.setName("jours").setDescription("Durée en jours").setMinValue(1).setRequired(true))
         .addIntegerOption((option) => option.setName("quantite").setDescription("Quantité d'objet").setMinValue(1)),
     )
+    .addSubcommand((sub) => sub.setName("supprimer").setDescription("Supprimer une quête par son ID")
+      .addStringOption((option) => option.setName("id").setDescription("ID de la quête").setRequired(true)))
     ,
   async execute(interaction: ChatInputCommandInteraction) {
     const guildId = interaction.guildId!;
@@ -53,7 +55,14 @@ const command: Command = {
       return;
     }
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply({ content: "❌ Seuls les administrateurs peuvent créer une quête.", ephemeral: true });
+      await interaction.reply({ content: "❌ Permission Gérer le serveur nécessaire pour modifier les quêtes.", ephemeral: true });
+      return;
+    }
+
+    if (subcommand === "supprimer") {
+      const id = interaction.options.getString("id", true);
+      const removed = await questStore.remove(guildId, id);
+      await interaction.reply({ content: removed ? "✅ Quête supprimée." : "❌ Quête introuvable.", ephemeral: true });
       return;
     }
 

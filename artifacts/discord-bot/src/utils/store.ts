@@ -343,6 +343,7 @@ function articleFromRow(row: typeof shopArticlesTable.$inferSelect): ShopArticle
     price: row.price,
     stock: row.stock ?? undefined,
     objectId: row.objectId ?? undefined,
+    requiredRoleId: row.requiredRoleId ?? undefined,
     createdAt: row.createdAt,
     sortOrder: row.sortOrder,
   };
@@ -504,6 +505,7 @@ export async function initializeCommunityStore() {
           price: article.price,
           stock: article.stock ?? null,
           objectId: article.objectId ?? null,
+      requiredRoleId: article.requiredRoleId ?? null,
           createdAt: article.createdAt,
           sortOrder: article.sortOrder,
         }).onConflictDoNothing();
@@ -583,6 +585,8 @@ export const communityConfigStore = {
       levelsChannelId: row.levelsChannelId ?? undefined,
       welcomeChannelId: row.welcomeChannelId ?? undefined,
       welcomeMessage: row.welcomeMessage ?? undefined,
+      goodbyeChannelId: row.goodbyeChannelId ?? undefined,
+      goodbyeMessage: row.goodbyeMessage ?? undefined,
       quotaPeriodKey: row.quotaPeriodKey ?? undefined,
       quotaReminderKey: row.quotaReminderKey ?? undefined,
     };
@@ -595,6 +599,8 @@ export const communityConfigStore = {
       levelsChannelId: config.levelsChannelId ?? null,
       welcomeChannelId: config.welcomeChannelId ?? null,
       welcomeMessage: config.welcomeMessage ?? null,
+      goodbyeChannelId: config.goodbyeChannelId ?? null,
+      goodbyeMessage: config.goodbyeMessage ?? null,
       quotaPeriodKey: config.quotaPeriodKey ?? null,
       quotaReminderKey: config.quotaReminderKey ?? null,
     }).onConflictDoUpdate({
@@ -605,6 +611,8 @@ export const communityConfigStore = {
         levelsChannelId: config.levelsChannelId ?? null,
         welcomeChannelId: config.welcomeChannelId ?? null,
         welcomeMessage: config.welcomeMessage ?? null,
+      goodbyeChannelId: config.goodbyeChannelId ?? null,
+      goodbyeMessage: config.goodbyeMessage ?? null,
         quotaPeriodKey: config.quotaPeriodKey ?? null,
         quotaReminderKey: config.quotaReminderKey ?? null,
       },
@@ -770,6 +778,7 @@ export const articleStore = {
       price: article.price,
       stock: article.stock ?? null,
       objectId: article.objectId ?? null,
+      requiredRoleId: article.requiredRoleId ?? null,
       createdAt: article.createdAt,
       sortOrder: article.sortOrder,
     });
@@ -784,7 +793,7 @@ export const articleStore = {
   async update(
     guildId: string,
     id: string,
-    patch: Partial<Omit<ShopArticle, "stock">> & { stock?: number | null },
+    patch: Partial<Omit<ShopArticle, "stock" | "requiredRoleId">> & { stock?: number | null; requiredRoleId?: string | null },
   ) {
     const article = await this.getById(guildId, id);
     if (!article) return false;
@@ -794,6 +803,7 @@ export const articleStore = {
       price: patch.price ?? article.price,
       stock: patch.stock === undefined ? article.stock ?? null : patch.stock,
       objectId: patch.objectId ?? article.objectId ?? null,
+      requiredRoleId: patch.requiredRoleId === undefined ? article.requiredRoleId ?? null : patch.requiredRoleId,
       sortOrder: patch.sortOrder ?? article.sortOrder,
     }).where(and(eq(shopArticlesTable.guildId, guildId), eq(shopArticlesTable.id, id)));
     return true;
@@ -828,13 +838,14 @@ export const articleStore = {
     )).returning({ id: shopArticlesTable.id });
     return deleted.length > 0;
   },
-  async purchase(guildId: string, id: string, userId: string, userTag: string, uniqueRoleObjectId?: string) {
+  async purchase(guildId: string, id: string, userId: string, userTag: string, uniqueRoleObjectId?: string, memberRoleIds: string[] = []) {
     return db.transaction(async (tx) => {
       const [articleRow] = await tx.select().from(shopArticlesTable).where(and(
         eq(shopArticlesTable.guildId, guildId),
         eq(shopArticlesTable.id, id),
       )).for("update").limit(1);
       if (!articleRow) return { ok: false as const, reason: "not_found" as const };
+      if (articleRow.requiredRoleId && !memberRoleIds.includes(articleRow.requiredRoleId)) return { ok: false as const, reason: "missing_role" as const };
       if (articleRow.stock !== null && articleRow.stock <= 0) {
         return { ok: false as const, reason: "sold_out" as const };
       }
@@ -991,6 +1002,10 @@ export const questStore = {
       eq(questsTable.id, id),
     )).limit(1);
     return row ? questFromRow(row) : undefined;
+  },
+  async remove(guildId: string, id: string): Promise<boolean> {
+    const deleted = await db.delete(questsTable).where(and(eq(questsTable.guildId, guildId), eq(questsTable.id, id))).returning({ id: questsTable.id });
+    return deleted.length > 0;
   },
   async progress(guildId: string, userId: string, activity: "messages" | "vocal", amount: number) {
     return db.transaction(async (tx) => {

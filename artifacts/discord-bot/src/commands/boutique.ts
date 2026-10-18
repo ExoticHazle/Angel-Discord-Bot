@@ -62,7 +62,8 @@ const command: Command = {
         .addStringOption((option) => option.setName("description").setDescription("Description").setRequired(true))
         .addIntegerOption((option) => option.setName("prix").setDescription("Prix en Orëlyss").setMinValue(0).setRequired(true))
         .addIntegerOption((option) => option.setName("stock").setDescription("Stock maximal, omettre pour illimité").setMinValue(1))
-        .addStringOption((option) => option.setName("objet").setDescription("ID de l'objet remis à l'achat")),
+        .addStringOption((option) => option.setName("objet").setDescription("ID de l'objet remis à l'achat"))
+        .addRoleOption((option) => option.setName("role_requis").setDescription("Rôle nécessaire pour acheter cet article")),
     )
     .addSubcommand((sub) =>
       sub
@@ -73,7 +74,9 @@ const command: Command = {
         .addStringOption((option) => option.setName("description").setDescription("Nouvelle description").setRequired(true))
         .addIntegerOption((option) => option.setName("prix").setDescription("Nouveau prix").setMinValue(0).setRequired(true))
         .addIntegerOption((option) => option.setName("stock").setDescription("Nouveau stock (0 = épuisé, omettre pour conserver)").setMinValue(0))
-        .addBooleanOption((option) => option.setName("illimite").setDescription("Rendre le stock illimité")),
+        .addBooleanOption((option) => option.setName("illimite").setDescription("Rendre le stock illimité"))
+        .addRoleOption((option) => option.setName("role_requis").setDescription("Modifier le rôle obligatoire"))
+        .addBooleanOption((option) => option.setName("retirer_role").setDescription("Supprimer la restriction de rôle")),
     )
     .addSubcommand((sub) =>
       sub
@@ -158,6 +161,7 @@ const command: Command = {
               "",
               `**${price} Orëlyss** · ${stockLabel(article.stock)}`,
               ...(object?.roleId ? [`🎭 **Rôle offert :** <@&${object.roleId}>`] : []),
+              ...(article.requiredRoleId ? [`🔒 **Rôle requis :** <@&${article.requiredRoleId}>`] : []),
               `ID : \`${article.id}\``,
             ].join("\n"),
             inline: true,
@@ -194,6 +198,13 @@ const command: Command = {
         return;
       }
 
+      const buyer = await guild.members.fetch({ user: interaction.user.id, force: true }).catch(() => null);
+      if (!buyer) { await interaction.editReply("❌ Impossible de vérifier tes rôles."); return; }
+      if (article.requiredRoleId && !buyer.roles.cache.has(article.requiredRoleId)) {
+        await interaction.editReply(`🔒 Tu dois posséder le rôle <@&${article.requiredRoleId}> pour acheter cet article.`);
+        return;
+      }
+
       // Un article peut récompenser un rôle par l'intermédiaire de son objet.
       const object = article.objectId ? await objectStore.getById(guildId, article.objectId) : undefined;
       let rewardRole: Role | null = null;
@@ -224,9 +235,10 @@ const command: Command = {
       }
 
       const result = await articleStore.purchase(guildId, id, interaction.user.id, interaction.user.tag,
-        rewardRole ? object?.id : undefined);
+        rewardRole ? object?.id : undefined, [...buyer.roles.cache.keys()]);
       const messages = {
         not_found: "❌ Article introuvable.",
+        missing_role: "🔒 Tu ne possèdes pas le rôle requis pour cet achat.",
         sold_out: "❌ Cet article est épuisé.",
         funds: "❌ Vous n'avez pas assez d'Orëlyss.",
         already_owned: "❌ Tu possèdes déjà cet objet offrant un rôle. Aucun Orëlyss débité.",
@@ -336,6 +348,7 @@ const command: Command = {
         price: interaction.options.getInteger("prix", true),
         stock: interaction.options.getInteger("stock") ?? undefined,
         objectId,
+        requiredRoleId: interaction.options.getRole("role_requis")?.id,
         createdAt: Date.now(),
         sortOrder: articles.length + 1,
       };
@@ -354,11 +367,15 @@ const command: Command = {
         });
         return;
       }
+      const role = interaction.options.getRole("role_requis");
+      const removeRole = interaction.options.getBoolean("retirer_role") ?? false;
+      if (role && removeRole) { await interaction.reply({ content: "❌ Choisis un rôle ou retire la restriction, pas les deux.", ephemeral: true }); return; }
       const changed = await articleStore.update(guildId, id, {
         name: interaction.options.getString("nom", true),
         description: interaction.options.getString("description", true),
         price: interaction.options.getInteger("prix", true),
         stock: unlimited ? null : stock ?? undefined,
+        requiredRoleId: removeRole ? null : role?.id,
       });
       await interaction.reply({ content: changed ? "✅ Article modifié." : "❌ Article introuvable.", ephemeral: true });
       return;
