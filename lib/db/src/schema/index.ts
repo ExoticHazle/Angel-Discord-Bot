@@ -7,6 +7,8 @@ export const communityConfigsTable = pgTable("discord_community_configs", {
   levelsChannelId: text("levels_channel_id"),
   welcomeChannelId: text("welcome_channel_id"),
   welcomeMessage: text("welcome_message"),
+  goodbyeChannelId: text("goodbye_channel_id"),
+  goodbyeMessage: text("goodbye_message"),
   quotaPeriodKey: text("quota_period_key"),
   quotaReminderKey: text("quota_reminder_key"),
 });
@@ -53,6 +55,7 @@ export const shopArticlesTable = pgTable("discord_shop_articles", {
   price: integer("price").notNull(),
   stock: integer("stock"),
   objectId: text("object_id"),
+  requiredRoleId: text("required_role_id"),
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
   sortOrder: integer("sort_order").notNull(),
 });
