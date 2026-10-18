@@ -1,6 +1,7 @@
 import { AttachmentBuilder, EmbedBuilder, type GuildMember, type MessageCreateOptions } from "discord.js";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { everyoneMessageParts } from "./everyoneMention.js";
 
 export const DEFAULT_WELCOME_TEMPLATE =
   "✨ Bienvenue {user} sur **{server}** ! Tu es notre {memberCount}ᵉ membre. Installe-toi et profite du serveur.";
@@ -32,6 +33,7 @@ export function buildWelcomePayload(
   template: string,
   member: GuildMember,
   arrivalDate: Date = new Date(),
+  notifyEveryone = true,
 ): MessageCreateOptions {
   const date = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
@@ -43,14 +45,16 @@ export function buildWelcomePayload(
     hour12: false,
   }).format(arrivalDate);
 
+  const { templateWithoutMentions, options } = everyoneMessageParts(template, notifyEveryone);
+
   const embed = new EmbedBuilder()
     .setColor(0x10346b)
-    .setDescription(renderWelcomeMessage(template, member))
+    .setDescription(renderWelcomeMessage(templateWithoutMentions || DEFAULT_WELCOME_TEMPLATE, member))
     .setFooter({ text: `📅 ${date}` });
 
   const payload: MessageCreateOptions = {
     embeds: [embed],
-    allowedMentions: { parse: [], users: [member.id] },
+    ...options,
   };
 
   if (existsSync(WELCOME_IMAGE_PATH)) {
