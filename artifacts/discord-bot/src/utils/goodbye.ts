@@ -5,6 +5,7 @@ import {
   type MessageCreateOptions,
 } from "discord.js";
 import { fileURLToPath } from "node:url";
+import { everyoneMessageParts } from "./everyoneMention.js";
 
 export const DEFAULT_GOODBYE_TEMPLATE = "{username} a quitté le serveur.";
 
@@ -31,6 +32,7 @@ export function buildGoodbyePayload(
   template: string,
   member: GuildMember,
   departureDate: Date = new Date(),
+  notifyEveryone = true,
 ): MessageCreateOptions {
   const date = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
@@ -42,10 +44,12 @@ export function buildGoodbyePayload(
     hour12: false,
   }).format(departureDate);
 
+  const { templateWithoutMentions, options } = everyoneMessageParts(template, notifyEveryone);
+
   const embed = new EmbedBuilder()
     .setColor(0xf15b5b)
     .setTitle("👋 Départ")
-    .setDescription(renderGoodbyeMessage(template, member))
+    .setDescription(renderGoodbyeMessage(templateWithoutMentions || DEFAULT_GOODBYE_TEMPLATE, member))
     .setThumbnail(member.user.displayAvatarURL({ size: 128 }))
     .setImage("attachment://" + GOODBYE_IMAGE_NAME)
     .setFooter({ text: date });
@@ -53,6 +57,6 @@ export function buildGoodbyePayload(
   return {
     embeds: [embed],
     files: [new AttachmentBuilder(GOODBYE_IMAGE_PATH, { name: GOODBYE_IMAGE_NAME })],
-    allowedMentions: { parse: [] },
+    ...options,
   };
 }
