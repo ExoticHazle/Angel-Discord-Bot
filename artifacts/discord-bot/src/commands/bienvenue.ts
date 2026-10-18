@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import type { Command } from "../types.js";
 import { communityConfigStore } from "../utils/store.js";
+import { hasEveryoneMention } from "../utils/everyoneMention.js";
 import {
   DEFAULT_WELCOME_TEMPLATE,
   buildWelcomePayload,
@@ -31,7 +32,7 @@ const command: Command = {
         .addStringOption((option) =>
           option
             .setName("message")
-            .setDescription("Modèle : {user}, {username}, {server}, {memberCount}")
+            .setDescription("Modèle : {user}, {username}, @everyone, etc.")
             .setMaxLength(1_500),
         ),
     )
@@ -88,13 +89,24 @@ const command: Command = {
         return;
       }
 
+      if (hasEveryoneMention(message ?? "")) {
+        const [author, bot] = await Promise.all([
+          guild.members.fetch(interaction.user.id).catch(() => null),
+          guild.members.fetchMe().catch(() => null),
+        ]);
+        if (!author || !bot || !channel.permissionsFor(author)?.has(PermissionFlagsBits.MentionEveryone) || !channel.permissionsFor(bot)?.has(PermissionFlagsBits.MentionEveryone)) {
+          await interaction.reply({ content: "❌ Pour utiliser @everyone ou @here, toi et Angel devez avoir la permission Mentionner @everyone dans ce salon.", ephemeral: true });
+          return;
+        }
+      }
+
       config.welcomeChannelId = channel.id;
       config.welcomeMessage = message?.trim() || DEFAULT_WELCOME_TEMPLATE;
       await communityConfigStore.save(guild.id, config);
       await interaction.reply({
         content:
           `✅ Message de bienvenue activé dans ${channel}.\n` +
-          "Variables disponibles : `{user}`, `{username}`, `{server}`, `{memberCount}`.",
+          "Variables disponibles : `{user}`, `{username}`, `{server}`, `{memberCount}`. Tu peux inclure `@everyone` ou `@here` pour notifier les membres.",
         ephemeral: true,
       });
       return;
@@ -140,6 +152,8 @@ const command: Command = {
           buildWelcomePayload(
             config.welcomeMessage ?? DEFAULT_WELCOME_TEMPLATE,
             member,
+            new Date(),
+            false, // Les tests ne déclenchent jamais de ping général.
           ),
         );
       } catch {
@@ -150,7 +164,7 @@ const command: Command = {
         return;
       }
       await interaction.reply({
-        content: `✅ Aperçu envoyé dans ${channel}.`,
+        content: `✅ Aperçu envoyé dans ${channel} (sans ping général).`,
         ephemeral: true,
       });
       return;
