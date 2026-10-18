@@ -45,6 +45,8 @@ export interface GuildCommunityConfig {
   levelsChannelId?: string;
   welcomeChannelId?: string;
   welcomeMessage?: string;
+  goodbyeChannelId?: string;
+  goodbyeMessage?: string;
   quotaPeriodKey?: string;
   quotaReminderKey?: string;
 }
@@ -72,6 +74,8 @@ export interface ShopArticle {
   price: number;
   stock?: number;
   objectId?: string;
+  /** Rôle exigé pour acheter cet article, différent du rôle éventuellement offert. */
+  requiredRoleId?: string;
   createdAt: number;
   sortOrder: number;
 }
