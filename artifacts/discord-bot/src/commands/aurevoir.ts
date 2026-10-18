@@ -2,6 +2,7 @@ import { ChannelType, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, ty
 import type { Command } from "../types.js";
 import { communityConfigStore } from "../utils/store.js";
 import { DEFAULT_GOODBYE_TEMPLATE, buildGoodbyePayload } from "../utils/goodbye.js";
+import { hasEveryoneMention } from "../utils/everyoneMention.js";
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -10,7 +11,7 @@ const command: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) => sub.setName("configurer").setDescription("Activer les annonces de départ")
       .addChannelOption((option) => option.setName("salon").setDescription("Salon des départs").addChannelTypes(ChannelType.GuildText).setRequired(true))
-      .addStringOption((option) => option.setName("message").setDescription("Variables : {user}, {username}, {server}, {memberCount}").setMaxLength(1500)))
+      .addStringOption((option) => option.setName("message").setDescription("Variables : {username}, {server}, {memberCount}, @everyone").setMaxLength(1500)))
     .addSubcommand((sub) => sub.setName("voir").setDescription("Afficher la configuration"))
     .addSubcommand((sub) => sub.setName("test").setDescription("Envoyer un aperçu"))
     .addSubcommand((sub) => sub.setName("desactiver").setDescription("Désactiver les annonces de départ")),
@@ -29,10 +30,20 @@ const command: Command = {
         await interaction.reply({ content: "❌ Le message ne peut pas être vide.", ephemeral: true });
         return;
       }
+      if (hasEveryoneMention(raw ?? "")) {
+        const [author, bot] = await Promise.all([
+          guild.members.fetch(interaction.user.id).catch(() => null),
+          guild.members.fetchMe().catch(() => null),
+        ]);
+        if (!author || !bot || !channel.permissionsFor(author)?.has(PermissionFlagsBits.MentionEveryone) || !channel.permissionsFor(bot)?.has(PermissionFlagsBits.MentionEveryone)) {
+          await interaction.reply({ content: "❌ Pour utiliser @everyone ou @here, toi et Angel devez avoir la permission Mentionner @everyone dans ce salon.", ephemeral: true });
+          return;
+        }
+      }
       config.goodbyeChannelId = channel.id;
       config.goodbyeMessage = raw?.trim() || DEFAULT_GOODBYE_TEMPLATE;
       await communityConfigStore.save(guild.id, config);
-      await interaction.reply({ content: `✅ Messages d’au revoir activés dans <#${channel.id}>.`, ephemeral: true });
+      await interaction.reply({ content: `✅ Messages d’au revoir activés dans <#${channel.id}>. Ajoute \`@everyone\` dans le texte si tu veux notifier tout le serveur.`, ephemeral: true });
       return;
     }
     if (sub === "voir") {
@@ -58,8 +69,8 @@ const command: Command = {
         return;
       }
       try {
-        await channel.send(buildGoodbyePayload(config.goodbyeMessage ?? DEFAULT_GOODBYE_TEMPLATE, member));
-        await interaction.reply({ content: `✅ Aperçu envoyé dans <#${channel.id}>.`, ephemeral: true });
+        await channel.send(buildGoodbyePayload(config.goodbyeMessage ?? DEFAULT_GOODBYE_TEMPLATE, member, new Date(), false));
+        await interaction.reply({ content: `✅ Aperçu envoyé dans <#${channel.id}> (sans ping @everyone).`, ephemeral: true });
       } catch {
         await interaction.reply({ content: "❌ Impossible d'envoyer le message dans ce salon.", ephemeral: true });
       }
