@@ -6,6 +6,7 @@ import {
   type GuildTextBasedChannel,
 } from "discord.js";
 import type { Command } from "../types.js";
+import { hasEveryoneMention } from "../utils/everyoneMention.js";
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -49,10 +50,19 @@ const command: Command = {
       return;
     }
 
+    const wantsEveryonePing = hasEveryoneMention(text);
+    if (wantsEveryonePing) {
+      const author = await guild.members.fetch(interaction.user.id).catch(() => null);
+      if (!author || !target.permissionsFor(author)?.has(PermissionFlagsBits.MentionEveryone) || !perms.has(PermissionFlagsBits.MentionEveryone)) {
+        await interaction.reply({ content: "❌ Toi et Angel devez avoir la permission Mentionner @everyone dans ce salon.", ephemeral: true });
+        return;
+      }
+    }
+
     try {
       await target.send({
         content: text,
-        allowedMentions: { parse: ["users", "roles"] },
+        allowedMentions: { parse: wantsEveryonePing ? ["users", "roles", "everyone"] : ["users", "roles"] },
       });
       await interaction.reply({ content: `✅ Message envoyé dans ${target}.`, ephemeral: true });
     } catch (err) {
