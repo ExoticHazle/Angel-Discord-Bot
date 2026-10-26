@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { createServer } from "http";
 import type { Command } from "./types.js";
 import { initializeCommunityStore } from "./utils/store.js";
+import { registerDiscordLogs } from "./utils/discordLogs.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,9 +25,13 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildEmojisAndStickers,
+    GatewayIntentBits.GuildInvites,
+    GatewayIntentBits.AutoModerationExecution,
     GatewayIntentBits.DirectMessages,
   ],
-  partials: [Partials.Channel, Partials.Message, Partials.Reaction],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User],
 });
 
 const commands = new Collection<string, Command>();
@@ -72,6 +77,7 @@ async function loadEvents() {
 await loadCommands();
 await loadEvents();
 await initializeCommunityStore();
+registerDiscordLogs(client);
 
 const token = process.env.DISCORD_BOT_TOKEN;
 if (!token) {
