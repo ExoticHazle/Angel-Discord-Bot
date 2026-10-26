@@ -185,6 +185,8 @@ interface VoiceSessionCheckpoint {
   creditedMinutes: number;
 }
 const voiceSessionCheckpoints: Record<string, VoiceSessionCheckpoint> = {};
+// Configuration des journaux par serveur, persistée dans discord_runtime_state.
+const logChannels: Record<string, string> = {};
 
 const runtimeState = {
   autoroles,
@@ -194,6 +196,7 @@ const runtimeState = {
   staffWarns,
   openTickets,
   voiceSessionCheckpoints,
+  logChannels,
 };
 
 type RuntimeStateKey = keyof typeof runtimeState;
@@ -225,6 +228,23 @@ function replaceRuntimeState(target: object, persisted: unknown, stateKey: strin
   for (const key of Object.keys(record)) delete record[key];
   Object.assign(record, persisted);
 }
+
+/** Salon recevant les journaux Discord sur chaque serveur. */
+export const logChannelStore = {
+  get(guildId: string): string | undefined {
+    return logChannels[guildId];
+  },
+  set(guildId: string, channelId: string): Promise<void> {
+    return updateRuntimeState("logChannels", () => {
+      logChannels[guildId] = channelId;
+    });
+  },
+  remove(guildId: string): Promise<void> {
+    return updateRuntimeState("logChannels", () => {
+      delete logChannels[guildId];
+    });
+  },
+};
 
 export const ticketStore = {
   get(guildId: string, userId: string): string | undefined {
