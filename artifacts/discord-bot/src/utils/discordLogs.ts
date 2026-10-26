@@ -51,7 +51,7 @@ export function registerDiscordLogs(client: Client) {
     await emit(msg.guild, "🗑️ Message supprimé", [["Auteur", who(msg.author?.id)], ["Salon", ch(msg.channelId)],
       ["Contenu", messageText(msg)], ["ID du message", msg.id]], 0xed4245, msg.channelId);
   });
-  client.on(Events.MessageDeleteBulk, async msgs => {
+  client.on(Events.MessageBulkDelete, async msgs => {
     const msg = msgs.first();
     if (!msg?.guild) return;
     await emit(msg.guild, "🗑️ Suppression multiple", [["Salon", ch(msg.channelId)], ["Nombre", msgs.size]], 0xed4245, msg.channelId);
@@ -172,7 +172,7 @@ export function registerDiscordLogs(client: Client) {
         ["Archivé", String(after.archived)], ["Verrouillé", String(after.locked)]]);
   });
   client.on(Events.AutoModerationActionExecution, async result => {
-    await emit(client.guilds.cache.get(result.guildId), "🛡️ AutoMod déclenché", [
+    await emit(result.guild, "🛡️ AutoMod déclenché", [
       ["Membre", who(result.userId)], ["Salon", ch(result.channelId)], ["Règle", result.ruleId],
       ["Action", String(result.action.type)], ["Contenu", result.matchedContent || "(indisponible)"]], 0xfaa61a);
   });
