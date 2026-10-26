@@ -33,6 +33,7 @@ const command: Command = {
             "`/boutique ajouter|modifier|supprimer|ordre` — gérer la boutique et ses rôles requis",
             "`/quete ajouter|supprimer` — créer et supprimer des quêtes",
             "`/log achat` — consulter les achats",
+            "`/logs configurer|voir|test|desactiver` — gérer le salon des journaux",
             "`/warnstaff` — avertissements du staff",
             "`/reglement` — configurer le règlement",
           ].join("\n"),
