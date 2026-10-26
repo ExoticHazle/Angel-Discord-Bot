@@ -35,9 +35,63 @@ const messageText = (message: Message | PartialMessage) => {
 const reactionText = (reaction: MessageReaction | PartialMessageReaction) =>
   reaction.emoji.id ? `<:${reaction.emoji.name ?? "emoji"}:${reaction.emoji.id}>` : reaction.emoji.name ?? "Emoji inconnu";
 
+// Les événements de suppression peuvent contenir seulement un message "partial".
+// On garde temporairement les messages récents pour pouvoir afficher leur contenu.
+interface SavedMessage {
+  authorId?: string;
+  authorName?: string;
+  text: string;
+  savedAt: number;
+}
+const recentMessages = new Map<string, SavedMessage>();
+const MAX_SAVED_MESSAGES = 3000;
+const MAX_MESSAGE_AGE = 24 * 60 * 60 * 1000;
+
+function rememberMessage(message: Message | PartialMessage) {
+  if (!message.guild || message.partial || message.channelId === logChannelStore.get(message.guild.id)) return;
+  const attachments = message.attachments.map(a => a.url).slice(0, 5);
+  const text = [message.content || "(message sans texte)",
+    attachments.length ? `Pièces jointes :\n${attachments.join("\n")}` : ""].filter(Boolean).join("\n");
+  const saved: SavedMessage = {
+    authorId: message.author?.id,
+    authorName: message.author?.tag,
+    text: trim(text, 3500),
+    savedAt: Date.now(),
+  };
+  recentMessages.delete(message.id);
+  recentMessages.set(message.id, saved);
+  // Limite mémoire et durée de conservation même sur les serveurs très actifs.
+  while (recentMessages.size > MAX_SAVED_MESSAGES) {
+    const oldest = recentMessages.keys().next().value;
+    if (!oldest) break;
+    recentMessages.delete(oldest);
+  }
+  for (const [id, entry] of recentMessages) {
+    if (Date.now() - entry.savedAt < MAX_MESSAGE_AGE) break;
+    recentMessages.delete(id);
+  }
+}
+
+function deletedMessageDetails(message: Message | PartialMessage): { author: string; text: string } {
+  const saved = recentMessages.get(message.id);
+  recentMessages.delete(message.id);
+  const authorId = message.author?.id ?? saved?.authorId;
+  const authorName = message.author?.tag ?? saved?.authorName;
+  const text = !message.partial ? messageText(message) : saved?.text ?? "(contenu indisponible : message non présent en cache)";
+  return {
+    author: `${who(authorId)}${authorName ? ` — ${authorName}` : ""}`,
+    text,
+  };
+}
+
 export function registerDiscordLogs(client: Client) {
+  client.on(Events.MessageCreate, message => {
+    rememberMessage(message);
+  });
   client.on(Events.MessageUpdate, async (oldMsg, newMsg) => {
-    if (!newMsg.guild || newMsg.author?.bot || oldMsg.content === newMsg.content) return;
+    if (!newMsg.guild) return;
+    rememberMessage(newMsg);
+    if (newMsg.author?.bot || oldMsg.content === newMsg.content) return;
     await emit(newMsg.guild, "✏️ Message modifié", [
       ["Auteur", who(newMsg.author?.id ?? oldMsg.author?.id)],
       ["Salon", ch(newMsg.channelId)],
@@ -47,14 +101,30 @@ export function registerDiscordLogs(client: Client) {
     ], 0xfee75c, newMsg.channelId);
   });
   client.on(Events.MessageDelete, async msg => {
-    if (!msg.guild || msg.author?.bot) return;
-    await emit(msg.guild, "🗑️ Message supprimé", [["Auteur", who(msg.author?.id)], ["Salon", ch(msg.channelId)],
-      ["Contenu", messageText(msg)], ["ID du message", msg.id]], 0xed4245, msg.channelId);
+    if (!msg.guild) return;
+    const details = deletedMessageDetails(msg);
+    await emit(msg.guild, "🗑️ Message supprimé", [
+      ["Auteur", details.author],
+      ["Salon", ch(msg.channelId)],
+      ["Contenu du message", details.text],
+      ["ID du message", msg.id],
+    ], 0xed4245, msg.channelId);
   });
   client.on(Events.MessageBulkDelete, async msgs => {
-    const msg = msgs.first();
-    if (!msg?.guild) return;
-    await emit(msg.guild, "🗑️ Suppression multiple", [["Salon", ch(msg.channelId)], ["Nombre", msgs.size]], 0xed4245, msg.channelId);
+    const first = msgs.first();
+    if (!first?.guild) return;
+    // /clear et les autres suppressions multiples : afficher chaque message,
+    // mais regrouper les résultats pour ne pas envoyer 100 embeds séparés.
+    const entries = [...msgs.values()].map(msg => ({ msg, details: deletedMessageDetails(msg) }));
+    for (let index = 0; index < entries.length; index += 10) {
+      const part = entries.slice(index, index + 10);
+      await emit(first.guild, `🗑️ Messages supprimés (${index + 1}–${index + part.length} / ${entries.length})`, [
+        ["Salon", ch(first.channelId)],
+        ["Nombre total", entries.length],
+        ...part.map(({ msg, details }): [string, string] =>
+          [`Message ${msg.id} — ${details.author}`, details.text]),
+      ], 0xed4245, first.channelId);
+    }
   });
   client.on(Events.MessageReactionAdd, async (reaction, user) => {
     if (!reaction.message.guild || user.bot) return;
