@@ -12,10 +12,18 @@ if (!process.env.AIVEN_CA_CERT) {
   throw new Error("AIVEN_CA_CERT must be set.");
 }
 
+// Nettoyage des paramètres SSL de l'URL
+const databaseUrl = new URL(process.env.DATABASE_URL);
+
+databaseUrl.searchParams.delete("sslmode");
+databaseUrl.searchParams.delete("sslrootcert");
+databaseUrl.searchParams.delete("sslcert");
+databaseUrl.searchParams.delete("sslkey");
+
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl.toString(),
   ssl: {
-    ca: process.env.AIVEN_CA_CERT,
+    ca: process.env.AIVEN_CA_CERT.replace(/\\n/g, "\n"),
     rejectUnauthorized: true,
   },
 });
